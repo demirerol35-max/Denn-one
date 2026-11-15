@@ -1,0 +1,10 @@
+{
+  "name": "Deen One",
+  "short_name": "Deen One",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f7f4",
+  "theme_color": "#075b4b",
+  "description": "Application islamique éducative gratuite"
+}
