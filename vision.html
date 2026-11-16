@@ -388,4 +388,43 @@ classicStart.addEventListener('click',()=>{if(loading||running){end();say('Mode 
 classicReset?.addEventListener('click',()=>{if(loading||running)end()},true);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&(running||loading)){end();say('Microphone arrêté : application en arrière-plan.')}});
 window.addEventListener('pagehide',()=>{if(running||loading)end()});
-</script></body></html>
+</script><script id="deen-settings-confirmation">
+(()=>{
+const controls={
+'app-language':'deen-app-language',
+'app-theme':'deen-app-theme',
+'app-contrast':'deen-app-contrast',
+'app-motion':'deen-app-motion',
+'app-simple':'deen-app-simple'
+};
+const messages={
+fr:'Confirmer ce changement de paramètre ?',
+en:'Confirm this settings change?',
+tr:'Bu ayar değişikliğini onaylıyor musunuz?',
+de:'Diese Einstellungsänderung bestätigen?',
+ar:'هل تؤكد تغيير هذا الإعداد؟'
+};
+const initial={};
+Object.entries(controls).forEach(([id,key])=>{
+ const el=document.getElementById(id);
+ if(!el)return;
+ initial[id]=el.type==='checkbox'?el.checked:el.value;
+});
+document.getElementById('settings')?.addEventListener('change',event=>{
+ const el=event.target,key=controls[el.id];
+ if(!key)return;
+ const previous=initial[el.id],current=el.type==='checkbox'?el.checked:el.value;
+ if(current===previous)return;
+ const language=localStorage.getItem('deen-app-language')||'fr';
+ if(!window.confirm(messages[language]||messages.fr)){
+  if(el.type==='checkbox')el.checked=previous;
+  else el.value=previous;
+  event.stopImmediatePropagation();
+  event.preventDefault();
+  return;
+ }
+ initial[el.id]=current;
+},true);
+})();
+</script>
+</body></html>
