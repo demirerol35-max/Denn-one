@@ -324,7 +324,18 @@ async function setSource(){if(customUrl){URL.revokeObjectURL(customUrl);customUr
 setSource();
 $('adhan-save-settings').addEventListener('click',async()=>{try{const file=$('adhan-custom-file').files[0];if(file){if(!file.type.startsWith('audio/'))throw Error('Choisis un fichier audio.');if(file.size>15*1024*1024)throw Error('Le fichier audio doit faire moins de 15 Mo.');await saveAudio(file)}if(voice.value==='custom'&&!file&&!(await readAudio()))throw Error('Ajoute un fichier audio personnalisé avant de choisir cette option.');localStorage.setItem(key,JSON.stringify({auto:enabled.checked,notify:notify.checked,voice:voice.value}));await setSource();msg.textContent='✓ Préférences enregistrées. Gardez l’application ouverte pour les rappels.'}catch(e){msg.textContent='Enregistrement impossible : '+e.message}});
 $('adhan-allow-notifications').addEventListener('click',async()=>{if(!('Notification'in window)){msg.textContent='Notifications non disponibles dans ce navigateur.';return}try{const permission=await Notification.requestPermission();msg.textContent=permission==='granted'?'Notifications autorisées.':'Notifications non autorisées.'}catch(e){msg.textContent='Impossible de demander cette autorisation.'}});
-$('adhan-test-sound').addEventListener('click',async()=>{try{if(voice.value==='silent'){msg.textContent='Mode silencieux sélectionné.';return}if(voice.value!==saved().voice){msg.textContent='Enregistre d’abord ton choix de voix.';return}if(voice.value==='custom'&&!audio.getAttribute('src')){msg.textContent='Aucun fichier audio personnalisé enregistré.';return}await audio.play();msg.textContent='Lecture de test lancée.'}catch(e){msg.textContent='Lecture bloquée : appuie de nouveau ou vérifie le fichier audio.'}});
+let preview=null,previewUrl=null;
+function stopPreview(){if(preview){preview.pause();preview.removeAttribute('src');preview=null}if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null}$('adhan-test-sound').textContent='▶ Écouter cette voix'}
+voice.addEventListener('change',stopPreview);
+$('adhan-test-sound').addEventListener('click',async()=>{
+if(preview&&!preview.paused){stopPreview();msg.textContent='Écoute arrêtée.';return}
+stopPreview();const v=voice.value;
+if(v==='silent'){msg.textContent='Mode silencieux : aucun Adhan à écouter.';return}
+try{let src;if(v==='custom'){const blob=$('adhan-custom-file').files[0]||await readAudio();if(!blob){msg.textContent='Choisis un fichier audio pour écouter cette voix.';return}previewUrl=URL.createObjectURL(blob);src=previewUrl}
+else{const sources={'default':defaultSrc,'voice-aishatu':'https://commons.wikimedia.org/wiki/Special:Redirect/file/Muslim%20calling%20to%20prayer.ogg','voice-short':'https://commons.wikimedia.org/wiki/Special:Redirect/file/Adhan.ogg'};src=sources[v]||defaultSrc}
+preview=new Audio();preview.preload='auto';preview.src=src;preview.onended=()=>{stopPreview();msg.textContent='Écoute terminée.'};preview.onerror=()=>{stopPreview();msg.textContent='Impossible de charger cet enregistrement. Vérifie la connexion ou réessaie.'};await preview.play();$('adhan-test-sound').textContent='■ Arrêter l’écoute';msg.textContent='Écoute en cours : '+voice.options[voice.selectedIndex].text+'.'
+}catch(e){stopPreview();msg.textContent='Lecture impossible sur cet appareil. Vérifie le volume et la connexion.'}
+});
 window.addEventListener('deen-prayer-timings',e=>{schedule=e.detail;check()});
 function check(){if(!schedule)return;const p=saved();if(!p.auto&&!p.notify)return;const d=new Date(),tz=schedule.timezone;let stamp;try{stamp=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d)}catch(e){return}
 const parts=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d);const date=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
