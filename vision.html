@@ -271,10 +271,11 @@ function renderCalendar(){
   const eventInfo=inMonth?eventDays[p.month+'-'+p.day]:null,eventSymbol=eventInfo?.[0];if(eventInfo){b.classList.add('deen-event-day');b.title=eventInfo[eventLangIndex];b.setAttribute('aria-label',b.getAttribute('aria-label')+' · '+b.title)}
   const a=document.createElement('b');a.textContent=p.day;
   const sub=document.createElement('small');sub.textContent=new Intl.DateTimeFormat(locale,{day:'numeric',month:'short'}).format(d);
-  b.append(a,sub);if(eventSymbol&&inMonth){const marker=document.createElement('span');marker.className='deen-calendar-event-mark';marker.textContent=eventSymbol;marker.setAttribute('aria-hidden','true');b.append(marker)}b.onclick=()=>{selected=d;document.querySelector('#selected-date').textContent=h(d)+' · '+dateFormat.format(d);renderCalendar()};
+  b.append(a,sub);if(eventSymbol&&inMonth){const marker=document.createElement('span');marker.className='deen-calendar-event-mark';marker.textContent=eventSymbol;marker.setAttribute('aria-hidden','true');b.append(marker)}b.onclick=()=>{selected=d;renderCalendar()};
   grid.append(b)
  }
- document.querySelector('#selected-date').textContent=h(selected)+' · '+dateFormat.format(selected)
+ const selectedHijri=hijriParts(selected),selectedEvent=eventDays[selectedHijri.month+'-'+selectedHijri.day];
+ document.querySelector('#selected-date').textContent=h(selected)+' · '+dateFormat.format(selected)+(selectedEvent?' · '+selectedEvent[eventLangIndex]:'')
 }
 document.querySelector('#prev').onclick=()=>shiftHijriMonth(-1);
 document.querySelector('#next').onclick=()=>shiftHijriMonth(1);
