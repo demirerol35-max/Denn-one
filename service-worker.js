@@ -1,1 +1,46 @@
-const CACHE='deen-one-beta-v2';self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html','./manifest.webmanifest'])))});self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))])));self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin)return;e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return r}).catch(()=>caches.match(e.request)))});
+// Deen One — cache local du coeur de l'application.
+// Les données externes (horaires, géolocalisation, API, audio distant)
+// ne sont jamais mises en cache ici.
+const CACHE = 'deen-one-shell-v3';
+const APP_SHELL = ['./', './index.html', './vision.html', './manifest.webmanifest'];
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+  );
+});
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then(keys => Promise.all(
+        keys.filter(key => key.startsWith('deen-one-') && key !== CACHE)
+          .map(key => caches.delete(key))
+      )),
+      self.clients.claim()
+    ])
+  );
+});
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  // Network-first: show updates promptly, fall back to cached pages offline.
+  event.respondWith(
+    fetch(request).then(response => {
+      if (response.ok && response.type === 'basic') {
+        const copy = response.clone();
+        event.waitUntil(caches.open(CACHE).then(cache => cache.put(request, copy)));
+      }
+      return response;
+    }).catch(async () => {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      if (request.mode === 'navigate') {
+        return (await caches.match('./vision.html')) ||
+          (await caches.match('./index.html')) ||
+          Response.error();
+      }
+      return Response.error();
+    })
+  );
+});
