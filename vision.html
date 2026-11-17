@@ -252,6 +252,8 @@ function renderCalendar(){
  const language=document.getElementById('app-language')?.value||document.documentElement.lang||'fr';
  const locale=({fr:'fr-FR',en:'en-GB',tr:'tr-TR',de:'de-DE',ar:'ar-SA-u-ca-gregory'})[language]||'fr-FR';
  const dateFormat=new Intl.DateTimeFormat(locale,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+ const calendarUi={fr:['Mois hégirien précédent','Mois hégirien suivant','Date sélectionnée'],en:['Previous Hijri month','Next Hijri month','Selected date'],tr:['Önceki hicrî ay','Sonraki hicrî ay','Seçili tarih'],de:['Vorheriger Hidschri-Monat','Nächster Hidschri-Monat','Ausgewähltes Datum'],ar:['الشهر الهجري السابق','الشهر الهجري التالي','التاريخ المحدد']}[language]||['Mois hégirien précédent','Mois hégirien suivant','Date sélectionnée'];
+ document.querySelector('#prev').setAttribute('aria-label',calendarUi[0]);document.querySelector('#next').setAttribute('aria-label',calendarUi[1]);
  const hp=hijriParts(shown),months=deenHijriMonths[language]||deenHijriMonths.fr;
  document.querySelector('#month').textContent=months[hp.month-1]+' '+hp.year+' '+(language==='tr'?'Hicrî':language==='ar'?'هـ':'AH');
  const grid=document.querySelector('#calendar-grid');grid.replaceChildren();
@@ -263,7 +265,7 @@ function renderCalendar(){
   const d=new Date(shown);d.setDate(shown.getDate()+i-offset);
   const p=hijriParts(d),inMonth=p.month===hp.month&&p.year===hp.year;
   const b=document.createElement('button');b.className='day'+(!inMonth?' other':'')+(d.toDateString()===new Date().toDateString()?' today':'');
-  if(d.toDateString()===selected.toDateString())b.classList.add('selected');
+  const isSelected=d.toDateString()===selected.toDateString();if(isSelected)b.classList.add('selected');b.setAttribute('aria-pressed',String(isSelected));b.setAttribute('aria-label',deenHijriFormat(d,language)+' · '+dateFormat.format(d));
   const a=document.createElement('b');a.textContent=p.day;
   const sub=document.createElement('small');sub.textContent=new Intl.DateTimeFormat(locale,{day:'numeric',month:'short'}).format(d);
   b.append(a,sub);b.onclick=()=>{selected=d;document.querySelector('#selected-date').textContent=h(d)+' · '+dateFormat.format(d);renderCalendar()};
