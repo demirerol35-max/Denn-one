@@ -305,17 +305,23 @@ function restoreQuranVerse(surah){
  }));
 }
 document.querySelectorAll('[data-tab="quran"]').forEach(button=>button.addEventListener('click',()=>setTimeout(()=>{if(current&&ayahs.length)restoreQuranVerse(current)},0)));
+function saveQuranViewport(){
+ if(quranRestoring||!current||!ayahs.length||document.querySelector('#quran').hidden)return;
+ const visible=[...container.querySelectorAll('.quran-ayah')].find(el=>{const r=el.getBoundingClientRect();return r.bottom>100&&r.top<window.innerHeight*.75});
+ if(!visible)return;
+ const match=visible.id.match(/^ayah-(\d+)-(\d+)$/);
+ if(match&&Number(match[1])===current)localStorage.setItem('deen-quran-view-position',JSON.stringify({s:current,a:Number(match[2])}));
+}
 let quranScrollTimer=null;
 window.addEventListener('scroll',()=>{
- if(quranScrollTimer)clearTimeout(quranScrollTimer);
- quranScrollTimer=setTimeout(()=>{
-  if(quranRestoring||!current||!ayahs.length||!document.querySelector('#quran')||document.querySelector('#quran').hidden)return;
-  const visible=[...container.querySelectorAll('.quran-ayah')].find(el=>{const r=el.getBoundingClientRect();return r.bottom>100&&r.top<window.innerHeight*.75});
-  if(!visible)return;
-  const match=visible.id.match(/^ayah-(\d+)-(\d+)$/);
-  if(match&&Number(match[1])===current)localStorage.setItem('deen-quran-view-position',JSON.stringify({s:current,a:Number(match[2])}));
- },250);
+ clearTimeout(quranScrollTimer);
+ quranScrollTimer=setTimeout(saveQuranViewport,250);
 },{passive:true});
+window.addEventListener('pagehide',()=>{clearTimeout(quranScrollTimer);saveQuranViewport()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(quranScrollTimer);saveQuranViewport()}});
+document.querySelectorAll('[data-tab]').forEach(button=>{
+ if(button.dataset.tab!=='quran')button.addEventListener('click',saveQuranViewport,{capture:true});
+});
 async function catalogue(){const saved=Number(localStorage.getItem('deen-quran-selected-surah'));catalogueOfflineFallback=false;try{const response=await fetch('https://api.alquran.cloud/v1/meta');if(!response.ok)throw Error('network');const json=await response.json();const surahs=json.data?.surahs?.references;if(!surahs||surahs.length!==114)throw Error('metadata');sel.replaceChildren();surahs.forEach(s=>{const o=document.createElement('option');o.value=String(s.number);o.textContent=s.number+' · '+s.englishName+' — '+s.name;sel.append(o)});sel.value=String(Number.isInteger(saved)&&saved>=1&&saved<=114?saved:112);syncSelfSurahs();status.textContent='114 sourates disponibles en ligne.'}catch(e){catalogueOfflineFallback=true;if(saved===1)sel.value='fatiha';else sel.value='ikhlas';status.textContent='Catalogue complet indisponible hors connexion : deux sourates locales disponibles.'}await loadSurah()}
 function reciteStop(){clearTimeout(reciteTimer);reciteTimer=null;showReciteVerse();reciteToken++;if(audio){audio.pause();audio.onended=null}reciteActive=false;recitePlayed=0}
 function showReciteVerse(){document.querySelectorAll('#verses .quran-ayah-text').forEach(el=>{el.style.visibility='visible'});document.querySelector('#recite-self-status').textContent='';document.querySelector('#self-training-verse').style.visibility='visible'}
