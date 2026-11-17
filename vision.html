@@ -293,13 +293,19 @@ const holidays=[
 const locales=['fr','en','tr','de','ar'],gregLocales={fr:'fr-FR',en:'en-GB',tr:'tr-TR',de:'de-DE',ar:'ar-SA-u-ca-gregory'};
 const fmt=new Intl.DateTimeFormat('en-US',{calendar:'islamic-umalqura',numberingSystem:'latn',day:'numeric',month:'numeric',year:'numeric'});
 function parts(d){const p=fmt.formatToParts(d),num=k=>Number(p.find(x=>x.type===k)?.value);return {day:num('day'),month:num('month')}}
-const upcoming=[];try{const today=new Date();for(let i=0;i<410;i++){const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()+i,12),p=parts(d);for(const e of holidays)if(e.day===p.day&&e.month===p.month)upcoming.push({date:d,event:e})}}catch(e){}
+let upcoming=[],eventsComputedFor='';
+function refreshUpcoming(){
+ const today=new Date(),key=today.getFullYear()+'-'+today.getMonth()+'-'+today.getDate();
+ if(eventsComputedFor===key)return;
+ const next=[];try{for(let i=0;i<410;i++){const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()+i,12),p=parts(d);for(const e of holidays)if(e.day===p.day&&e.month===p.month)next.push({date:d,event:e})}}catch(e){upcoming=[];eventsComputedFor='';return}
+ upcoming=next;eventsComputedFor=key;
+}
 const list=document.querySelector('#events-list');
-function renderEvents(){if(!list)return;list.replaceChildren();const lang=document.getElementById('app-language')?.value||'fr',index=Math.max(0,locales.indexOf(lang)),locale=gregLocales[lang]||'fr-FR';
+function renderEvents(){if(!list)return;refreshUpcoming();list.replaceChildren();const lang=document.getElementById('app-language')?.value||'fr',index=Math.max(0,locales.indexOf(lang)),locale=gregLocales[lang]||'fr-FR';
 if(!upcoming.length){list.textContent={fr:'Calendrier indisponible sur cet appareil.',en:'Calendar unavailable on this device.',tr:'Bu cihazda takvim kullanılamıyor.',de:'Kalender auf diesem Gerät nicht verfügbar.',ar:'التقويم غير متاح على هذا الجهاز.'}[lang];return}
 for(const e of upcoming.slice(0,14)){const el=document.createElement('div');el.style.cssText='border-bottom:1px solid #e9eee7;padding:15px 0';const date=document.createElement('small');date.style.color='#8d794a';date.textContent=deenHijriFormat(e.date,lang)+' · '+new Intl.DateTimeFormat(locale,{day:'numeric',month:'long',year:'numeric'}).format(e.date);const name=document.createElement('strong');name.style.cssText='display:block;margin-top:5px';name.textContent=e.event.names[index];el.append(date,name);list.append(el)}
 }
-renderEvents();document.getElementById('app-language')?.addEventListener('change',()=>queueMicrotask(renderEvents));
+renderEvents();document.getElementById('app-language')?.addEventListener('change',()=>queueMicrotask(renderEvents));document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderEvents()});
 })();
 </script><script>
 (()=>{const city=document.querySelector('#prayer-city'),country=document.querySelector('#prayer-country'),method=document.querySelector('#prayer-method'),status=document.querySelector('#prayer-status'),list=document.querySelector('#prayer-list'),qibla=document.querySelector('#qibla-detail');try{const saved=JSON.parse(localStorage.getItem('deen-prayer-location')||'null');if(saved){city.value=saved.city||'Mulhouse';country.value=saved.country||'France';method.value=saved.method||'12'}}catch(e){}
