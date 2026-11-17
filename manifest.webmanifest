@@ -2,7 +2,7 @@
   "name": "Deen One",
   "short_name": "Deen One",
   "id": "./",
-  "start_url": "./",
+  "start_url": "./vision.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f7f4",
@@ -14,5 +14,13 @@
     "education",
     "lifestyle"
   ],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "./deen-one-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
