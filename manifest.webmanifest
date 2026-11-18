@@ -28,5 +28,33 @@
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Horaires de prière",
+      "short_name": "Prière",
+      "description": "Consulter les horaires des prières",
+      "url": "./vision.html#prayer",
+      "icons": [
+        {
+          "src": "./deen-one-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Lire le Coran",
+      "short_name": "Coran",
+      "description": "Ouvrir la lecture du Coran",
+      "url": "./vision.html#quran",
+      "icons": [
+        {
+          "src": "./deen-one-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
   ]
 }
