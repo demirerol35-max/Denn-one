@@ -28,6 +28,28 @@ self.addEventListener('fetch', event => {
   }).catch(async () => (await caches.match(key)) || Response.error()));
 });
 
+
+// Receive server-sent Web Push messages while the app is closed.
+// A push subscription and a trusted scheduling server are still required.
+self.addEventListener('push', event => {
+  event.waitUntil((async () => {
+    let data = {};
+    try { data = event.data ? event.data.json() : {}; } catch (_) { return; }
+    if (!data || data.type !== 'prayer' || typeof data.prayer !== 'string') return;
+    const allowed = new Set(['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']);
+    if (!allowed.has(data.prayer)) return;
+    const title = 'Deen One · ' + data.prayer;
+    const options = {
+      body: typeof data.body === 'string' ? data.body.slice(0, 160) : 'C’est l’heure de la prière.',
+      icon: './deen-one-icon.svg',
+      badge: './deen-one-icon.svg',
+      tag: 'deen-one-prayer-' + data.prayer,
+      data: { url: new URL('./vision.html#prayer', self.registration.scope).href }
+    };
+    await self.registration.showNotification(title, options);
+  })());
+});
+
 // Open the prayer screen when a notification is tapped. This handler does not
 // schedule notifications: Android background delivery requires a push source.
 self.addEventListener('notificationclick', event => {
