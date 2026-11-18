@@ -38,6 +38,13 @@ self.addEventListener('push', event => {
     if (!data || data.type !== 'prayer' || typeof data.prayer !== 'string') return;
     const allowed = new Set(['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']);
     if (!allowed.has(data.prayer)) return;
+    // Do not display a prayer alert delivered long after its scheduled time.
+    // The sending service should include a Unix-millisecond scheduledAt value.
+    if (data.scheduledAt !== undefined) {
+      if (!Number.isFinite(data.scheduledAt)) return;
+      const delay = Date.now() - data.scheduledAt;
+      if (delay > 10 * 60 * 1000 || delay < -2 * 60 * 1000) return;
+    }
     const prayerNames = {
       fr: { Fajr: 'Fajr', Dhuhr: 'Dhuhr', Asr: 'Asr', Maghrib: 'Maghrib', Isha: 'Icha' },
       tr: { Fajr: 'Sabah', Dhuhr: 'Öğle', Asr: 'İkindi', Maghrib: 'Akşam', Isha: 'Yatsı' },
@@ -58,7 +65,10 @@ self.addEventListener('push', event => {
       body: typeof data.body === 'string' ? data.body.slice(0, 160) : messages[lang],
       icon: './deen-one-icon.svg',
       badge: './deen-one-icon.svg',
-      tag: 'deen-one-prayer-' + data.prayer,
+      tag: 'deen-one-prayer-' + data.prayer + '-' + (data.scheduledAt || new Date().toISOString().slice(0, 10)),
+      lang,
+      dir: lang === 'ar' ? 'rtl' : 'ltr',
+      timestamp: Number.isFinite(data.scheduledAt) ? data.scheduledAt : Date.now(),
       data: { url: new URL('./vision.html#prayer', self.registration.scope).href }
     };
     await self.registration.showNotification(title, options);
