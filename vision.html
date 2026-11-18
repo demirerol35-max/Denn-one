@@ -140,6 +140,12 @@ html[data-theme="light"] body.deen-inside-page #deen-page-toolbar{background:#ea
 html[data-theme="light"] body.deen-inside-page #deen-page-menu{background:#e1eee7;color:#153f36;border-color:#b4cfc1}
 body.deen-inside-page #deen-main-tabs button{width:100%;text-align:start;flex:none;white-space:normal;min-height:44px;color:#153f36;background:#f2f6f2}
 body.deen-inside-page #deen-main-tabs button.active{background:#0b6654;color:#fff}
+/* Dark drawer overrides must follow the shared button rules. */
+html[data-theme="dark"] body.deen-inside-page #deen-main-tabs button{background:#19312b;color:#e5f0e8;border:1px solid #35564a}
+html[data-theme="dark"] body.deen-inside-page #deen-main-tabs button.active{background:#1a8268;color:#fff}
+html[data-theme="dark"] body.deen-inside-page #deen-page-toolbar{background:#0d1e1b;color:#e5f0e8}
+body.deen-inside-page #deen-main-tabs button:focus-visible{outline:3px solid #d5ac5d;outline-offset:2px}
+body.deen-inside-page #deen-page-toolbar{scroll-margin-top:0}
 body.deen-inside-page.deen-drawer-open::after{content:"";position:fixed;inset:0;background:#0008;z-index:100}
 html[dir="rtl"] body.deen-inside-page #deen-main-tabs{direction:rtl}
 @media(max-width:640px){body.deen-inside-page #deen-main-tabs.deen-menu-open{max-height:100dvh;flex-wrap:nowrap}}
