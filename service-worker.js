@@ -1,5 +1,5 @@
 // Deen One: cache only the static application shell, never user/API data.
-const CACHE = 'deen-one-shell-v7';
+const CACHE = 'deen-one-shell-v8';
 const SHELL = ['./', './index.html', './vision.html', './manifest.webmanifest', './deen-one-icon.svg'];
 const SHELL_URLS = new Set(SHELL.map(path => new URL(path, self.registration.scope).pathname));
 self.addEventListener('install', event => {
@@ -38,9 +38,24 @@ self.addEventListener('push', event => {
     if (!data || data.type !== 'prayer' || typeof data.prayer !== 'string') return;
     const allowed = new Set(['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']);
     if (!allowed.has(data.prayer)) return;
-    const title = 'Deen One · ' + data.prayer;
+    const prayerNames = {
+      fr: { Fajr: 'Fajr', Dhuhr: 'Dhuhr', Asr: 'Asr', Maghrib: 'Maghrib', Isha: 'Icha' },
+      tr: { Fajr: 'Sabah', Dhuhr: 'Öğle', Asr: 'İkindi', Maghrib: 'Akşam', Isha: 'Yatsı' },
+      ar: { Fajr: 'الفجر', Dhuhr: 'الظهر', Asr: 'العصر', Maghrib: 'المغرب', Isha: 'العشاء' },
+      en: { Fajr: 'Fajr', Dhuhr: 'Dhuhr', Asr: 'Asr', Maghrib: 'Maghrib', Isha: 'Isha' },
+      de: { Fajr: 'Fadschr', Dhuhr: 'Dhuhr', Asr: 'Asr', Maghrib: 'Maghrib', Isha: 'Ischa' }
+    };
+    const messages = {
+      fr: 'C’est l’heure de la prière.',
+      tr: 'Namaz vakti geldi.',
+      ar: 'حان وقت الصلاة.',
+      en: 'It is time for prayer.',
+      de: 'Es ist Zeit für das Gebet.'
+    };
+    const lang = Object.prototype.hasOwnProperty.call(messages, data.lang) ? data.lang : 'fr';
+    const title = 'Deen One · ' + prayerNames[lang][data.prayer];
     const options = {
-      body: typeof data.body === 'string' ? data.body.slice(0, 160) : 'C’est l’heure de la prière.',
+      body: typeof data.body === 'string' ? data.body.slice(0, 160) : messages[lang],
       icon: './deen-one-icon.svg',
       badge: './deen-one-icon.svg',
       tag: 'deen-one-prayer-' + data.prayer,
