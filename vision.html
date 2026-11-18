@@ -379,13 +379,15 @@ async function autoLoad(){
  }
 }
 function prayerSettingsChanged(){activeGpsCoords=null;lastAutoDay='';prayerRetryAfter=0;pendingPrayerRefresh=true;autoLoad()}
-window.addEventListener('deen-qibla-gps',e=>{const rawLat=e.detail?.latitude,rawLon=e.detail?.longitude;if(rawLat===null||rawLat===undefined||rawLat===''||rawLon===null||rawLon===undefined||rawLon==='')return;const lat=Number(rawLat),lon=Number(rawLon);if(!document.getElementById('prayer').hidden&&Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180){activeGpsCoords={latitude:lat,longitude:lon};lastAutoDay=new Date().toDateString();prayerRetryAfter=0;loadPrayerTimes(activeGpsCoords)}});
+window.addEventListener('deen-qibla-gps',e=>{const rawLat=e.detail?.latitude,rawLon=e.detail?.longitude;if(rawLat===null||rawLat===undefined||rawLat===''||rawLon===null||rawLon===undefined||rawLon==='')return;const lat=Number(rawLat),lon=Number(rawLon);if(!document.getElementById('prayer').hidden&&Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180){/* GPS is a deliberate choice only when no manual city is selected. */if(city.value.trim()&&country.value.trim())return;activeGpsCoords={latitude:lat,longitude:lon};lastAutoDay=new Date().toDateString();prayerRetryAfter=0;loadPrayerTimes(activeGpsCoords)}});
 document.querySelectorAll('[data-tab="prayer"],[data-go="prayer"]').forEach(b=>b.addEventListener('click',()=>setTimeout(autoLoad,0)));
 window.addEventListener('hashchange',()=>setTimeout(autoLoad,0));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(autoLoad,0)});
 window.addEventListener('online',()=>setTimeout(autoLoad,0));
 city.addEventListener('change',prayerSettingsChanged);
 country.addEventListener('change',prayerSettingsChanged);
+city.addEventListener('input',()=>{activeGpsCoords=null;lastAutoDay=''});
+country.addEventListener('input',()=>{activeGpsCoords=null;lastAutoDay=''});
 method.addEventListener('change',prayerSettingsChanged);
 // Check the calendar date periodically while the prayer screen is visible.
 // The network request still runs only when the day changes.
