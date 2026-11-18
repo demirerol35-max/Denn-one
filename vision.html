@@ -124,14 +124,20 @@ body.deen-inside-page .main{max-width:1200px;width:100%;box-sizing:border-box;ma
 @keyframes deen-page-enter{from{opacity:.7;transform:translateY(5px)}to{opacity:1;transform:none}}
 @media(max-width:640px){body.deen-inside-page .main{padding-inline:12px}body.deen-inside-page .page:not([hidden]){min-height:calc(100dvh - 130px)}.deen-page-toolbar{position:sticky;top:0;z-index:30;padding:9px 0;background:var(--bg,#f8fbf8)}html[data-theme="dark"] .deen-page-toolbar{background:#12271f}}
 </style><style id="deen-right-drawer">
-/* Fixed right-hand drawer: remains visible without scrolling to the top. */
-body.deen-inside-page #deen-page-menu{position:fixed;right:12px;top:12px;bottom:auto;z-index:110;box-shadow:0 5px 24px #0003;background:#0b6854;color:white;border:1px solid #ffffff55;border-radius:999px;padding:12px 17px}
+/* Right-hand drawer with a toolbar-anchored trigger; no header overlap. */
+body.deen-inside-page #deen-page-menu{position:static;flex-shrink:0;z-index:auto;box-shadow:none;background:#19312b;color:#e5f0e8;border:1px solid #557165;border-radius:12px;padding:10px 13px;min-height:44px}
 body.deen-inside-page #deen-main-tabs{display:flex;position:fixed;top:0;right:0;bottom:0;left:auto;width:min(340px,88vw);max-height:100dvh;margin:0;padding:70px 16px 90px;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:7px;overflow-y:auto;overscroll-behavior:contain;background:#fff;color:#153f36;z-index:105;box-shadow:-12px 0 35px #0003;transform:translateX(110%);visibility:hidden;pointer-events:none;transition:transform .2s ease,visibility .2s}
 body.deen-inside-page #deen-main-tabs.deen-menu-open{transform:translateX(0);visibility:visible;pointer-events:auto}
 html[data-theme="dark"] body.deen-inside-page #deen-main-tabs{background:#0d1e1b;color:#e5f0e8;border-left:1px solid #35564a}
 html[data-theme="dark"] body.deen-inside-page #deen-main-tabs button{background:#19312b;color:#e5f0e8;border:1px solid #35564a}
 html[data-theme="dark"] body.deen-inside-page #deen-main-tabs button.active{background:#1a8268;color:#fff}
 html[data-theme="dark"] body.deen-inside-page #deen-page-menu{background:#19312b;color:#e5f0e8;border-color:#557165}
+body.deen-inside-page #deen-page-toolbar{position:sticky;top:0;z-index:110;display:flex;align-items:center;gap:10px;background:#0d1e1b;color:#e5f0e8;padding:10px 12px;border-radius:0 0 14px 14px;box-shadow:0 3px 12px #0002}
+body.deen-inside-page #deen-page-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(13px,3vw,17px)}
+body.deen-inside-page #deen-page-toolbar [data-go="home"]{flex-shrink:0;min-height:44px}
+@media(max-width:420px){body.deen-inside-page #deen-page-toolbar{gap:6px;padding:8px 6px}body.deen-inside-page #deen-page-toolbar button{font-size:13px;padding:9px 8px}body.deen-inside-page #deen-page-name{font-size:12px}}
+html[data-theme="light"] body.deen-inside-page #deen-page-toolbar{background:#eaf3ec;color:#153f36}
+html[data-theme="light"] body.deen-inside-page #deen-page-menu{background:#e1eee7;color:#153f36;border-color:#b4cfc1}
 body.deen-inside-page #deen-main-tabs button{width:100%;text-align:start;flex:none;white-space:normal;min-height:44px;color:#153f36;background:#f2f6f2}
 body.deen-inside-page #deen-main-tabs button.active{background:#0b6654;color:#fff}
 body.deen-inside-page.deen-drawer-open::after{content:"";position:fixed;inset:0;background:#0008;z-index:100}
