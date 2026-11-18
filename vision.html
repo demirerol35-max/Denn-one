@@ -276,7 +276,7 @@ body:not(.deen-inside-page) .deen-more-details summary{min-height:48px;display:f
 .deen-opening-inner{display:flex;align-items:center;flex-direction:column;text-align:center;gap:16px;padding:24px}
 .deen-opening-logo{width:min(58vw,240px);aspect-ratio:1;filter:drop-shadow(0 0 0 rgba(238,197,109,0));animation:deen-logo-reveal 2.3s ease-out both}
 .deen-opening-name{font-weight:750;font-size:clamp(23px,6vw,35px);letter-spacing:.13em}
-.deen-opening-hint{font-size:14px;color:#e4d3a8;min-height:20px}
+.deen-opening-hint{font-size:clamp(18px,4.8vw,27px);line-height:1.9;color:#e4d3a8;min-height:42px;max-width:95vw}
 #deen-opening-sound{border:1px solid #d9b66b;background:#164f43;color:#fff1cc;border-radius:999px;padding:11px 19px;font-weight:650}
 #deen-opening-skip{border:0;background:transparent;color:#dfd0aa;text-decoration:underline;padding:10px}
 @keyframes deen-logo-reveal{0%{opacity:0;transform:scale(.78);filter:drop-shadow(0 0 0 rgba(238,197,109,0))}55%{opacity:1;transform:scale(1.035);filter:drop-shadow(0 0 25px rgba(238,197,109,.45))}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 10px rgba(238,197,109,.18))}}
@@ -285,8 +285,8 @@ body:not(.deen-inside-page) .deen-more-details summary{min-height:48px;display:f
 <div class="deen-opening-inner">
 <img class="deen-opening-logo" src="./deen-one-icon.svg" alt="Logo officiel Deen One" width="240" height="240">
 <div class="deen-opening-name">DEEN ONE</div>
-<div class="deen-opening-hint" id="deen-opening-hint" lang="ar" dir="rtl">اقْرَأْ</div>
-<button id="deen-opening-sound" type="button" aria-label="Écouter Iqra en arabe">▶ Écouter « Iqra’ »</button>
+<div class="deen-opening-hint" id="deen-opening-hint" lang="ar" dir="rtl">اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ</div>
+<button id="deen-opening-sound" type="button" aria-label="Écouter le premier verset de la sourate Al-Alaq">▶ Écouter le verset</button>
 <button id="deen-opening-skip" type="button">Passer</button>
 </div></div>
 <script id="deen-opening-script">
@@ -302,11 +302,11 @@ const preferred=voices.find(v=>/male|masculin|homme|omar|tarik|tariq|hamza|ahmed
 return preferred||voices.find(v=>!/^ar-SA$/i.test(v.lang))||voices.find(v=>!/(natural|neural|google|samsung)/i.test(v.name))||voices[voices.length-1]}
 function speak(){return speakFallback()}
 function speakFallback(){if(closed||!('speechSynthesis' in window)){sound.hidden=false;return false}try{
-const synth=window.speechSynthesis;synth.cancel();const utterance=new SpeechSynthesisUtterance('اقْرَأْ');utterance.lang='ar-SA';utterance.rate=.69;utterance.pitch=.68;utterance.volume=1;
+const synth=window.speechSynthesis;synth.cancel();const utterance=new SpeechSynthesisUtterance('اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ');utterance.lang='ar-SA';utterance.rate=.69;utterance.pitch=.68;utterance.volume=1;
 const voice=chooseVoice();if(voice)utterance.voice=voice;
-utterance.onstart=()=>{started=true;sound.hidden=true;clearTimeout(timer);timer=setTimeout(close,2300)};
-utterance.onend=()=>{if(!closed){clearTimeout(timer);timer=setTimeout(close,550)}};
-utterance.onerror=()=>{if(!closed){sound.hidden=false;sound.textContent='▶ Écouter « Iqra’ »'}};
+utterance.onstart=()=>{started=true;sound.hidden=true;clearTimeout(timer);timer=setTimeout(close,8500)};
+utterance.onend=()=>{if(!closed){clearTimeout(timer);timer=setTimeout(close,1100)}};
+utterance.onerror=()=>{if(!closed){sound.hidden=false;sound.textContent='▶ Écouter le verset'}};
 synth.speak(utterance);return true;
 }catch(e){sound.hidden=false;return false}}
 sound.addEventListener('click',()=>{sound.hidden=true;speak()});
@@ -314,7 +314,7 @@ skip.addEventListener('click',close);
 if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){timer=setTimeout(close,1700)}else{
 timer=setTimeout(()=>{if(!started&&!closed){sound.hidden=false;sound.textContent='▶ Écouter « Iqra’ »'}},1250);
 setTimeout(()=>{if(!closed&&!started)speak()},160);
-setTimeout(()=>{if(!closed&&!started)close()},5200);
+setTimeout(()=>{if(!closed&&!started)close()},11000);
 }
 })();
 </script><header><div class="container"><div class="brand"><span>☪ <b>DEEN ONE</b></span><span class="tag">VISION INTERACTIVE</span></div><div class="hero"><small>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</small><h1><span data-i18n="heroSlogan1">La foi au quotidien.</span><br><span data-i18n="heroSlogan2">Le savoir pour la vie.</span></h1><p data-i18n="heroDescription">Un espace pour prier, apprendre, mémoriser et transmettre — accessible à toute la famille.</p></div></div></header><main class="main"><div id="deen-page-toolbar" class="deen-page-toolbar"><button class="outline" type="button" data-go="home">← Accueil</button><strong id="deen-page-name"></strong><button class="outline" type="button" id="deen-page-menu" aria-label="Afficher les rubriques" aria-expanded="false" aria-controls="deen-main-tabs">☰ Rubriques</button></div><div class="deen-tabs-shell" id="deen-tabs-shell"><button type="button" class="deen-tabs-arrow" id="deen-tabs-prev" aria-label="Rubriques précédentes">‹</button><nav class="tabs" id="deen-main-tabs" aria-label="Rubriques de Deen One"><button type="button" id="deen-drawer-close" aria-label="Fermer le menu" title="Fermer le menu"><span aria-hidden="true">‹</span></button><button class="active" data-tab="home">⌂ Accueil</button><button data-tab="quran">📖 Coran</button><button data-tab="self-training">🎙 Récite toi-même</button><button data-tab="quiz">✦ Mémorisation</button><button data-tab="verse-training">🧠 Verset suivant</button><button data-tab="dhikr">◉ Dhikr</button><button data-tab="calendar">▦ Calendrier</button><button data-tab="events">🌙 Événements</button><button data-tab="arabic">ا Arabe</button><button data-tab="duas">🤲 Invocations</button><button data-tab="solidarity">♡ Solidarité</button><button data-tab="prayer">🕌 Prières</button><button data-tab="settings" data-i18n="navSettings">⚙ Paramètres</button><button data-tab="routine">✓ Ma routine</button></nav><button type="button" class="deen-tabs-arrow" id="deen-tabs-next" aria-label="Rubriques suivantes">›</button></div>
