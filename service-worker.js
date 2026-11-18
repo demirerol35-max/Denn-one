@@ -80,10 +80,26 @@ self.addEventListener('notificationclick', event => {
   const target = new URL('./vision.html#prayer', self.registration.scope).href;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({type: 'window', includeUncontrolled: true});
-    const existing = windows.find(client => client.url.startsWith(self.registration.scope));
+    const existing = windows.find(client => {
+      try {
+        const url = new URL(client.url);
+        return url.origin === self.location.origin &&
+          url.pathname.startsWith(new URL(self.registration.scope).pathname);
+      } catch (_) { return false; }
+    });
     if (existing) {
-      try { if ('navigate' in existing) await existing.navigate(target); } catch (error) { /* Focus existing window if navigation is unsupported. */ }
-      await existing.focus();
+      try {
+        if ('navigate' in existing) {
+          const navigated = await existing.navigate(target);
+          await (navigated || existing).focus();
+          return;
+        }
+      } catch (_) { /* Fall back to opening the correct prayer URL. */ }
+      if (existing.url === target) {
+        await existing.focus();
+        return;
+      }
+      await self.clients.openWindow(target);
       return;
     }
     await self.clients.openWindow(target);
