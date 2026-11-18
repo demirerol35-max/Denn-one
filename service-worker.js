@@ -1,5 +1,5 @@
 // Deen One: cache only the static application shell, never user/API data.
-const CACHE = 'deen-one-shell-v6';
+const CACHE = 'deen-one-shell-v7';
 const SHELL = ['./', './index.html', './vision.html', './manifest.webmanifest', './deen-one-icon.svg'];
 const SHELL_URLS = new Set(SHELL.map(path => new URL(path, self.registration.scope).pathname));
 self.addEventListener('install', event => {
@@ -32,11 +32,12 @@ self.addEventListener('fetch', event => {
 // schedule notifications: Android background delivery requires a push source.
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const target = new URL('./vision.html', self.registration.scope).href;
+  const target = new URL('./vision.html#prayer', self.registration.scope).href;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({type: 'window', includeUncontrolled: true});
     const existing = windows.find(client => client.url.startsWith(self.registration.scope));
     if (existing) {
+      try { if ('navigate' in existing) await existing.navigate(target); } catch (error) { /* Focus existing window if navigation is unsupported. */ }
       await existing.focus();
       return;
     }
