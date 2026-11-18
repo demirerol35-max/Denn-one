@@ -296,9 +296,12 @@ if(!overlay||!sound||!skip)return;
 let closed=false,timer,started=false;
 sound.hidden=true;
 function close(){if(closed)return;closed=true;clearTimeout(timer);if('speechSynthesis' in window)window.speechSynthesis.cancel();overlay.classList.add('deen-opening-done');overlay.setAttribute('aria-hidden','true');setTimeout(()=>overlay.remove(),500)}
-function chooseVoice(){const voices=window.speechSynthesis.getVoices();return voices.find(v=>/^ar-SA$/i.test(v.lang)&&/natural|neural|google|samsung/i.test(v.name))||voices.find(v=>/^ar-SA$/i.test(v.lang))||voices.find(v=>/^ar(?:-|$)/i.test(v.lang))}
+function chooseVoice(){const voices=window.speechSynthesis.getVoices().filter(v=>/^ar(?:-|$)/i.test(v.lang));if(!voices.length)return null;
+// Prefer a different installed Arabic voice, ideally masculine, rather than the previous Saudi default.
+const preferred=voices.find(v=>/male|masculin|homme|omar|tarik|tariq|hamza|ahmed|maged/i.test(v.name));
+return preferred||voices.find(v=>!/^ar-SA$/i.test(v.lang))||voices.find(v=>!/(natural|neural|google|samsung)/i.test(v.name))||voices[voices.length-1]}
 function speak(){if(closed||!('speechSynthesis' in window))return false;try{
-const synth=window.speechSynthesis;synth.cancel();const utterance=new SpeechSynthesisUtterance('اقْرَأْ');utterance.lang='ar-SA';utterance.rate=.83;utterance.pitch=.88;utterance.volume=1;
+const synth=window.speechSynthesis;synth.cancel();const utterance=new SpeechSynthesisUtterance('اقْرَأْ');utterance.lang='ar-SA';utterance.rate=.76;utterance.pitch=.76;utterance.volume=1;
 const voice=chooseVoice();if(voice)utterance.voice=voice;
 utterance.onstart=()=>{started=true;sound.hidden=true;clearTimeout(timer);timer=setTimeout(close,2300)};
 utterance.onend=()=>{if(!closed){clearTimeout(timer);timer=setTimeout(close,550)}};
