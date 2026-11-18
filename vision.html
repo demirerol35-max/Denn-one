@@ -293,14 +293,20 @@ body:not(.deen-inside-page) .deen-more-details summary{min-height:48px;display:f
 (function(){
 const overlay=document.getElementById('deen-opening'),sound=document.getElementById('deen-opening-sound'),skip=document.getElementById('deen-opening-skip');
 if(!overlay||!sound||!skip)return;
-let closed=false,timer,started=false;
+let closed=false,timer,started=false;const recordedVoice=new Audio('./iqra-opening.mp3');recordedVoice.preload='auto';
 sound.hidden=true;
-function close(){if(closed)return;closed=true;clearTimeout(timer);if('speechSynthesis' in window)window.speechSynthesis.cancel();overlay.classList.add('deen-opening-done');overlay.setAttribute('aria-hidden','true');setTimeout(()=>overlay.remove(),500)}
+function close(){if(closed)return;closed=true;clearTimeout(timer);recordedVoice.pause();if('speechSynthesis' in window)window.speechSynthesis.cancel();overlay.classList.add('deen-opening-done');overlay.setAttribute('aria-hidden','true');setTimeout(()=>overlay.remove(),500)}
 function chooseVoice(){const voices=window.speechSynthesis.getVoices().filter(v=>/^ar(?:-|$)/i.test(v.lang));if(!voices.length)return null;
 // Prefer a different installed Arabic voice, ideally masculine, rather than the previous Saudi default.
 const preferred=voices.find(v=>/male|masculin|homme|omar|tarik|tariq|hamza|ahmed|maged/i.test(v.name));
 return preferred||voices.find(v=>!/^ar-SA$/i.test(v.lang))||voices.find(v=>!/(natural|neural|google|samsung)/i.test(v.name))||voices[voices.length-1]}
-function speak(){if(closed||!('speechSynthesis' in window))return false;try{
+function speak(){if(closed)return false;
+recordedVoice.currentTime=0;
+recordedVoice.onplaying=()=>{started=true;sound.hidden=true;clearTimeout(timer);timer=setTimeout(close,Math.min(9000,Math.max(1200,(recordedVoice.duration||5.75)*1000+400)))};
+recordedVoice.onended=()=>{if(!closed){clearTimeout(timer);timer=setTimeout(close,350)}};
+recordedVoice.play().catch(()=>speakFallback());
+return true}
+function speakFallback(){if(closed||!('speechSynthesis' in window)){sound.hidden=false;return false}try{
 const synth=window.speechSynthesis;synth.cancel();const utterance=new SpeechSynthesisUtterance('اقْرَأْ');utterance.lang='ar-SA';utterance.rate=.76;utterance.pitch=.76;utterance.volume=1;
 const voice=chooseVoice();if(voice)utterance.voice=voice;
 utterance.onstart=()=>{started=true;sound.hidden=true;clearTimeout(timer);timer=setTimeout(close,2300)};
