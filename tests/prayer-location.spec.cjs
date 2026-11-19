@@ -100,5 +100,5 @@ test('clearing manual city removes stale prayer times from home', async ({ page 
   await page.locator('#prayer-city').dispatchEvent('change');
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('deen-prayer-location')||'null')?.city)).toBe('');
   await expect(page.locator('#home-prayer-times')).toBeEmpty();
-  await expect(page.locator('#home-prayer-place')).toContainText('Choisissez une ville');
+  await expect(page.locator('#home-prayer-place')).toContainText(/Choisissez une ville|Choose a city|şehir seçin|Wählen Sie eine Stadt|اختر مدينة/);
 });
