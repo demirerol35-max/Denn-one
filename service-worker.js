@@ -1,9 +1,19 @@
 // Deen One: cache only the static application shell, never user/API data.
-const CACHE = 'deen-one-shell-v9';
+const CACHE = 'deen-one-shell-v10';
 const SHELL = ['./', './index.html', './vision.html', './manifest.webmanifest', './deen-one-icon.svg'];
 const SHELL_URLS = new Set(SHELL.map(path => new URL(path, self.registration.scope).pathname));
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(async cache => {
+    // A single missing optional asset must not prevent the app shell from installing.
+    await Promise.all(SHELL.map(async path => {
+      try { await cache.add(path); } catch (error) { console.warn('Deen One: offline asset unavailable', path, error); }
+    }));
+    // The main page must be available before activating the new offline worker.
+    if (!(await cache.match('./vision.html'))) {
+      await caches.delete(CACHE);
+      throw new Error('Deen One: main page not cached');
+    }
+  }).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(Promise.all([
