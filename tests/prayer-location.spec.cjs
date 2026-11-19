@@ -23,3 +23,28 @@ test('manual location persists and keeps home synchronized', async ({ page }) =>
   await expect(page.locator('#prayer-city')).toHaveValue('');
   await expect(page.locator('#prayer-country')).toHaveValue('JP');
 });
+
+test('GPS hides manual selectors and manual mode restores them', async ({ page, context }) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude:47.75, longitude:7.33 });
+  await page.addInitScript(() => {
+    localStorage.setItem('deen-home-location-mode','manual');
+    localStorage.setItem('deen-prayer-location',JSON.stringify({city:'Mulhouse',country:'FR',method:'12'}));
+  });
+  await page.route('https://api.aladhan.com/**', async route => {
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+      code:200,data:{timings:{Fajr:'05:30',Sunrise:'07:00',Dhuhr:'12:30',Asr:'15:30',Maghrib:'18:30',Isha:'20:00'},
+      meta:{timezone:'Europe/Paris',latitude:47.75,longitude:7.33,method:{id:12}}}
+    })});
+  });
+  await page.goto(url);
+  await page.evaluate(() => { document.querySelector('#prayer').hidden=false; });
+  await expect(page.locator('#prayer-manual-location')).toBeVisible();
+  await page.locator('input[name="prayer-location-choice"][value="auto"]').check();
+  await expect(page.locator('#prayer-manual-location')).toBeHidden();
+  await page.locator('input[name="prayer-location-choice"][value="manual"]').check();
+  await expect(page.locator('#prayer-manual-location')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('input[name="prayer-location-choice"][value="manual"]')).toBeChecked();
+  await expect(page.locator('#prayer-manual-location')).toBeVisible();
+});
