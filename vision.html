@@ -986,4 +986,28 @@ function refresh(){const inside=document.body.classList.contains('deen-inside-pa
 function move(direction){nav.scrollBy({left:direction*Math.max(180,nav.clientWidth*.75),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
 prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>move(1));nav.addEventListener('scroll',refresh,{passive:true});window.addEventListener('resize',refresh);document.querySelectorAll('#deen-main-tabs [data-tab]').forEach(button=>button.addEventListener('click',()=>{if(document.body.classList.contains('deen-inside-page'))return;button.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});setTimeout(refresh,250)}));new MutationObserver(refresh).observe(document.body,{attributes:true,attributeFilter:['class']});setTimeout(refresh,100);
 })();
-</script></body></html>
+</script><script>
+/* Independent prayer location selector: works even if another prayer module fails. */
+(()=>{
+ const choices=[...document.querySelectorAll('input[name="prayer-location-choice"]')];
+ const fields=document.getElementById('prayer-manual-location');
+ if(!choices.length||!fields)return;
+ const apply=()=>{
+  const mode=localStorage.getItem('deen-home-location-mode')==='manual'?'manual':'auto';
+  choices.forEach(choice=>{choice.checked=choice.value===mode});
+  fields.hidden=mode!=='manual';
+  fields.style.display=mode==='manual'?'block':'none';
+  for(const id of ['prayer-city','prayer-country']){
+   const input=document.getElementById(id);if(input)input.disabled=mode!=='manual';
+  }
+ };
+ choices.forEach(choice=>choice.addEventListener('change',()=>{
+  if(!choice.checked)return;
+  localStorage.setItem('deen-home-location-mode',choice.value);
+  apply();
+ }));
+ window.addEventListener('pageshow',apply);
+ apply();
+})();
+</script>
+</body></html>
