@@ -2,13 +2,10 @@ const { test, expect } = require('@playwright/test');
 const url = 'http://127.0.0.1:8765/vision.html';
 test('manual location persists and keeps home synchronized', async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem('deen-home-location-mode','manual');
-    localStorage.setItem('deen-prayer-location',JSON.stringify({city:'Mulhouse',country:'FR',method:'12'}));
+    if (!localStorage.getItem('deen-home-location-mode')) localStorage.setItem('deen-home-location-mode','manual');
+    if (!localStorage.getItem('deen-prayer-location')) localStorage.setItem('deen-prayer-location',JSON.stringify({city:'Mulhouse',country:'FR',method:'12'}));
   });
   await page.route('https://api.aladhan.com/**', async route => {
-    const requestUrl = new URL(route.request().url());
-    const city = requestUrl.searchParams.get('city') || 'GPS';
-    const country = requestUrl.searchParams.get('country') || 'France';
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
       code:200,data:{timings:{Fajr:'05:30',Sunrise:'07:00',Dhuhr:'12:30',Asr:'15:30',Maghrib:'18:30',Isha:'20:00'},
       date:{gregorian:{date:'19-11-2026'}},
