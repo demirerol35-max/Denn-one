@@ -102,3 +102,24 @@ test('clearing manual city removes stale prayer times from home', async ({ page 
   await expect(page.locator('#home-prayer-times')).toBeEmpty();
   await expect(page.locator('#home-prayer-place')).toContainText(/Choisissez une ville|Choose a city|şehir seçin|Wählen Sie eine Stadt|اختر مدينة/);
 });
+
+test('manual prayer timings request uses city and country rather than GPS coordinates', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('deen-home-location-mode','manual');
+    localStorage.setItem('deen-prayer-location',JSON.stringify({city:'Oran',country:'DZ',method:'19'}));
+  });
+  const prayerRequests=[];
+  await page.route('https://api.aladhan.com/**', async route => {
+    prayerRequests.push(route.request().url());
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+      code:200,data:{timings:{Fajr:'05:30',Sunrise:'07:00',Dhuhr:'12:30',Asr:'15:30',Maghrib:'18:30',Isha:'20:00'},
+      meta:{timezone:'Africa/Algiers',latitude:35.7,longitude:-0.63,method:{id:19}}}
+    })});
+  });
+  await page.goto(url);
+  await page.evaluate(() => { document.querySelector('#prayer').hidden=false; });
+  await expect.poll(() => prayerRequests.some(x => x.includes('/timingsByCity?') && x.includes('city=Oran'))).toBeTruthy();
+  await expect.poll(() => prayerRequests.some(x => x.includes('country=Algeria'))).toBeTruthy();
+  await expect(page.locator('#prayer-city')).toHaveValue('Oran');
+  await expect(page.locator('#prayer-country')).toHaveValue('DZ');
+});
