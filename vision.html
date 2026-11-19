@@ -273,16 +273,17 @@ body:not(.deen-inside-page) .deen-more-details summary{min-height:48px;display:f
 </style><style id="deen-opening-style">
 #deen-opening{position:fixed;inset:0;z-index:2147483640;background:radial-gradient(circle at 50% 43%,#17685a 0%,#073e36 48%,#032b28 100%);display:flex;align-items:center;justify-content:center;color:#f5e4b4;transition:opacity .45s ease,visibility .45s ease}
 #deen-opening.deen-opening-done{opacity:0;visibility:hidden;pointer-events:none}
-.deen-opening-inner{display:flex;align-items:center;flex-direction:column;text-align:center;gap:16px;padding:24px}
-.deen-opening-logo{width:min(58vw,240px);aspect-ratio:1;filter:drop-shadow(0 0 0 rgba(238,197,109,0));animation:deen-logo-reveal 2.3s ease-out both}
-.deen-opening-name{font-weight:750;font-size:clamp(23px,6vw,35px);letter-spacing:.13em}
-.deen-opening-hint{font-size:clamp(18px,4.8vw,27px);line-height:1.9;color:#e4d3a8;min-height:42px;max-width:95vw}
+.deen-opening-inner{display:flex;align-items:center;flex-direction:column;text-align:center;gap:0;padding:clamp(20px,5vh,42px) 22px;max-width:520px;width:100%;max-height:100dvh;overflow-y:auto}
+.deen-opening-logo{width:min(44vw,190px,24vh);aspect-ratio:1;filter:drop-shadow(0 0 0 rgba(238,197,109,0));animation:deen-logo-reveal 2.3s ease-out both}
+.deen-opening-name{font-weight:750;font-size:clamp(21px,5vw,31px);letter-spacing:.13em;margin-top:14px}
+.deen-opening-hint{font-size:clamp(20px,5.2vw,29px);line-height:1.8;color:#e4d3a8;max-width:100%;margin-top:clamp(20px,4vh,32px);text-wrap:balance}
 #deen-opening-sound{border:1px solid #d9b66b;background:#164f43;color:#fff1cc;border-radius:999px;padding:11px 19px;font-weight:650}
-#deen-opening-skip{border:0;background:transparent;color:#dfd0aa;text-decoration:underline;padding:10px}
+#deen-opening-skip{border:0;background:transparent;color:#dfd0aa;text-decoration:underline;padding:10px;margin-top:18px}
 @keyframes deen-logo-reveal{0%{opacity:0;transform:scale(.78);filter:drop-shadow(0 0 0 rgba(238,197,109,0))}55%{opacity:1;transform:scale(1.035);filter:drop-shadow(0 0 25px rgba(238,197,109,.45))}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 10px rgba(238,197,109,.18))}}
 @media(prefers-reduced-motion:reduce){.deen-opening-logo{animation:none}#deen-opening{transition:none}}
-.deen-opening-translation{font-size:clamp(14px,3.5vw,18px);line-height:1.6;color:#fff8e5;max-width:440px}
-.deen-opening-reference{font-size:12px;color:#d7bc80;letter-spacing:.05em}
+.deen-opening-translation{font-size:clamp(14px,3.5vw,18px);line-height:1.6;color:#fff8e5;max-width:440px;margin-top:12px;text-wrap:balance}
+.deen-opening-reference{font-size:12px;color:#d7bc80;letter-spacing:.05em;margin-top:10px}
+@media(max-height:650px){.deen-opening-logo{width:min(34vw,125px,22vh)}.deen-opening-name{margin-top:8px}.deen-opening-hint{margin-top:12px}.deen-opening-translation{margin-top:6px}#deen-opening-skip{margin-top:6px}}
 </style></head><body><div id="deen-opening" role="dialog" aria-label="Bienvenue sur Deen One" aria-modal="true">
 <div class="deen-opening-inner">
 <img class="deen-opening-logo" src="./deen-one-icon.svg" alt="Logo officiel Deen One" width="240" height="240">
