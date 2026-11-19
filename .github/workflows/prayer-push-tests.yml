@@ -1,9 +1,10 @@
-name: Prayer push scheduler tests
+name: Prayer scheduler and private backup tests
 
 on:
   push:
     paths:
       - 'push/**'
+      - 'privacy/**'
       - '.github/workflows/prayer-push-tests.yml'
   pull_request:
     paths:
@@ -24,4 +25,4 @@ jobs:
         with:
           node-version: '22'
       - name: Run scheduler tests
-        run: node --test push/prayer-scheduler.test.mjs
+        run: node --test push/prayer-scheduler.test.mjs privacy/progress-backup.test.mjs
