@@ -551,21 +551,23 @@ lastScheduleDate=normalizedDate;lastScheduleTimezone=apiTz;window.dispatchEvent(
   strip.textContent=homePrayerText(7);next.textContent=homePrayerText(8);
 }}}
 window.addEventListener('deen-qibla-gps',event=>{const {latitude,longitude}=event.detail||{};if(Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180){sessionGps={latitude,longitude};gpsCity='';load();resolveGpsCity(latitude,longitude)}});
-let lastGpsCheck=0,gpsRequestPending=false;
+let lastGpsCheck=0,gpsRequestPending=false,gpsDeniedForSession=false;
 function locateHome(force=false){
- if(!navigator.geolocation||!window.isSecureContext||gpsRequestPending)return;
+ if(!navigator.geolocation||!window.isSecureContext||gpsRequestPending||gpsDeniedForSession)return;
  if(!force&&Date.now()-lastGpsCheck<60000)return;
  lastGpsCheck=Date.now();gpsRequestPending=true;
  navigator.geolocation.getCurrentPosition(position=>{
   gpsRequestPending=false;
-  const {latitude,longitude}=position.coords;
+  const {latitude,longitude,accuracy}=position.coords;
+  // Reject extremely imprecise fixes (e.g. cellular positioning tens of km away).
+  if(!Number.isFinite(accuracy)||accuracy>10000)return;
   if(Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180){
    // Ignore small GPS jitter (roughly < 1 km) to keep the displayed city stable.
    const moved=!sessionGps||Math.abs(latitude-sessionGps.latitude)>0.01||Math.abs(longitude-sessionGps.longitude)>0.01;
    if(moved){sessionGps={latitude,longitude};gpsCity='';load();resolveGpsCity(latitude,longitude)}
    else if(!gpsCity){resolveGpsCity(sessionGps.latitude,sessionGps.longitude)}
   }
- },()=>{gpsRequestPending=false;/* Saved city remains the fallback. */},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
+ },error=>{gpsRequestPending=false;if(error?.code===1)gpsDeniedForSession=true;/* Saved city remains the fallback. */},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
 }
 // Ask for current location on first home visit; browsers retain the user's choice.
 // On a fresh page load, wait briefly for the authorized GPS fix before
