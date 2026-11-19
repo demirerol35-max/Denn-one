@@ -515,6 +515,11 @@ city.addEventListener('input',()=>{clearChosenCity();updateCitySuggestions()});
 country.addEventListener('change',()=>{
 clearChosenCity();if(cityController)cityController.abort();clearTimeout(cityTimer);
 city.value='';suggestions.replaceChildren();suggestions.hidden=true;
+// Do not keep showing prayer times for the previous country while the new city is empty.
+if(currentPrayerMode()==='manual'){
+ localStorage.setItem('deen-prayer-location',JSON.stringify({city:'',country:country.value,method:method.value}));
+ window.dispatchEvent(new CustomEvent('deen-prayer-location-changed'));
+}
 activeGpsCoords=null;lastAutoDay='';prayerRetryAfter=0;
 status.textContent=prayerText(0);list.replaceChildren();qibla.hidden=true;
 city.focus();
@@ -603,7 +608,7 @@ async function resolveGpsCity(latitude,longitude){
   if(sessionGps&&gpsCity){place.textContent=gpsCity+' · GPS'}
  }catch(e){/* Keep the GPS label when reverse geocoding is unavailable. */}
 }
-async function load(){const request=++latestLoad;window.dispatchEvent(new CustomEvent('deen-prayer-schedule-cleared'));manualCitySelected=localStorage.getItem('deen-home-location-mode')==='manual';if(manualCitySelected)sessionGps=null;const c=config();if(!manualCitySelected&&!sessionGps){place.textContent=({fr:'En attente du GPS…',en:'Waiting for GPS…',tr:'GPS bekleniyor…',de:'Warte auf GPS…',ar:'بانتظار GPS…'}[localStorage.getItem('deen-app-language')]||'En attente du GPS…');strip.textContent=homePrayerText(1);next.textContent='';return;}place.textContent=(!manualCitySelected&&sessionGps)?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):((manualCitySelected?'':({fr:'Ville enregistrée (GPS indisponible) : ',en:'Saved city (GPS unavailable): ',tr:'Kayıtlı şehir (GPS kullanılamıyor): ',de:'Gespeicherte Stadt (GPS nicht verfügbar): ',ar:'المدينة المحفوظة (الموقع غير متاح): '}[localStorage.getItem('deen-app-language')]||'Ville enregistrée (GPS indisponible) : '))+c.city+', '+c.country);strip.textContent=homePrayerText(1);next.textContent='';try{const countryInput=String(c.country||'FR').trim();
+async function load(){const request=++latestLoad;window.dispatchEvent(new CustomEvent('deen-prayer-schedule-cleared'));manualCitySelected=localStorage.getItem('deen-home-location-mode')==='manual';if(manualCitySelected)sessionGps=null;const c=config();if(manualCitySelected&&(!c.city||!c.country)){place.textContent='Choisissez une ville dans Prière';strip.textContent='';next.textContent='';return;}if(!manualCitySelected&&!sessionGps){place.textContent=({fr:'En attente du GPS…',en:'Waiting for GPS…',tr:'GPS bekleniyor…',de:'Warte auf GPS…',ar:'بانتظار GPS…'}[localStorage.getItem('deen-app-language')]||'En attente du GPS…');strip.textContent=homePrayerText(1);next.textContent='';return;}place.textContent=(!manualCitySelected&&sessionGps)?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):((manualCitySelected?'':({fr:'Ville enregistrée (GPS indisponible) : ',en:'Saved city (GPS unavailable): ',tr:'Kayıtlı şehir (GPS kullanılamıyor): ',de:'Gespeicherte Stadt (GPS nicht verfügbar): ',ar:'المدينة المحفوظة (الموقع غير متاح): '}[localStorage.getItem('deen-app-language')]||'Ville enregistrée (GPS indisponible) : '))+c.city+', '+c.country);strip.textContent=homePrayerText(1);next.textContent='';try{const countryInput=String(c.country||'FR').trim();
 const countryAliases={FRANCE:'FR',TURQUIE:'TR',TURKEY:'TR',TÜRKIYE:'TR',TURKIYE:'TR',GERMANY:'DE',ALLEMAGNE:'DE',SWITZERLAND:'CH',SUISSE:'CH',BELGIUM:'BE',BELGIQUE:'BE',MOROCCO:'MA',MAROC:'MA',ALGERIA:'DZ',ALGÉRIE:'DZ',ALGERIE:'DZ',TUNISIA:'TN',TUNISIE:'TN',EGYPT:'EG',EGYPTE:'EG','SAUDI ARABIA':'SA','ARABIE SAOUDITE':'SA','UNITED KINGDOM':'GB','ROYAUME-UNI':'GB','UNITED STATES':'US','ÉTATS-UNIS':'US'};
 const countryCode=countryAliases[countryInput.toUpperCase()]||countryInput.toUpperCase();
 const countryName=new Intl.DisplayNames(['en'],{type:'region'}).of(countryCode);
