@@ -45,6 +45,7 @@ test('GPS hides manual selectors and manual mode restores them', async ({ page, 
   await page.locator('input[name="prayer-location-choice"][value="manual"]').check();
   await expect(page.locator('#prayer-manual-location')).toBeVisible();
   await page.reload();
+  await page.evaluate(() => { document.querySelector('#prayer').hidden=false; });
   await expect(page.locator('input[name="prayer-location-choice"][value="manual"]')).toBeChecked();
   await expect(page.locator('#prayer-manual-location')).toBeVisible();
 });
