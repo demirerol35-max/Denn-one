@@ -567,7 +567,7 @@ async function autoLoad(){
 }
 function prayerSettingsChanged(){if(currentPrayerMode()!=='manual')return;
  const saved={city:city.value.trim(),country:country.value,method:method.value};
- if(saved.city&&saved.country){const previous=localStorage.getItem('deen-prayer-location');const updated=JSON.stringify(saved);if(previous!==updated){localStorage.setItem('deen-prayer-location',updated);window.dispatchEvent(new CustomEvent('deen-prayer-location-changed'));}}
+ if(saved.country){const previous=localStorage.getItem('deen-prayer-location');const updated=JSON.stringify(saved);if(previous!==updated){localStorage.setItem('deen-prayer-location',updated);window.dispatchEvent(new CustomEvent('deen-prayer-location-changed'));}}
  activeGpsCoords=null;lastAutoDay='';prayerRetryAfter=0;pendingPrayerRefresh=true;prayerRequestId++;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();list.replaceChildren();qibla.hidden=true;autoLoad()}
 // Other components may request GPS for the compass, but only the explicit button above changes prayer timetable location.
 document.querySelectorAll('[data-tab="prayer"],[data-go="prayer"]').forEach(b=>b.addEventListener('click',()=>setTimeout(autoLoad,0)));
