@@ -68,7 +68,7 @@ self.addEventListener('push', event => {
       lang,
       dir: lang === 'ar' ? 'rtl' : 'ltr',
       timestamp: data.scheduledAt,
-      data: { url: new URL('./vision.html#prayer', self.registration.scope).href }
+      data: { kind: 'prayer' }
     };
     // Duplicate push deliveries should not vibrate or alert twice.
     const existing = await self.registration.getNotifications({ tag: options.tag });
