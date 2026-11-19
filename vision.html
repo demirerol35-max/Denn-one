@@ -634,7 +634,7 @@ if(manualCitySelected)load();else if(navigator.geolocation&&window.isSecureConte
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){locateHome();if(sessionGps)load()}});
 
 document.querySelectorAll('[data-go="home"]').forEach(b=>b.addEventListener('click',()=>{load();locateHome()}));
-document.querySelector('#prayer-load').addEventListener('click',()=>{if(manualCitySelected)setTimeout(load,1200);else locateHome(true)});
+window.addEventListener('deen-prayer-location-changed',()=>setTimeout(load,250));
 // An explicit city selection must not be immediately overwritten by GPS.
 window.addEventListener('deen-prayer-mode-changed',e=>{
  manualCitySelected=e.detail.mode==='manual';
