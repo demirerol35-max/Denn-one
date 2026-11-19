@@ -288,8 +288,8 @@ body:not(.deen-inside-page) .deen-more-details summary{min-height:48px;display:f
 <img class="deen-opening-logo" src="./deen-one-icon.svg" alt="Logo officiel Deen One" width="240" height="240">
 <div class="deen-opening-name">DEEN ONE</div>
 <div class="deen-opening-hint" id="deen-opening-hint" lang="ar" dir="rtl">اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ</div>
-<div class="deen-opening-translation" lang="fr">« Lis, au nom de ton Seigneur qui a créé. »</div>
-<div class="deen-opening-reference">Sourate Al-'Alaq · 96:1</div>
+<div class="deen-opening-translation" id="deen-opening-translation" lang="fr">« Lis, au nom de ton Seigneur qui a créé. »</div>
+<div class="deen-opening-reference" id="deen-opening-reference">Sourate Al-'Alaq · 96:1</div>
 <button id="deen-opening-skip" type="button">Passer</button>
 </div></div>
 <script id="deen-opening-script">
@@ -297,6 +297,21 @@ body:not(.deen-inside-page) .deen-more-details summary{min-height:48px;display:f
 const overlay=document.getElementById('deen-opening'),skip=document.getElementById('deen-opening-skip');
 if(!overlay||!skip)return;
 let closed=false;
+const translations={
+fr:['« Lis, au nom de ton Seigneur qui a créé. »',"Sourate Al-'Alaq · 96:1",'Passer'],
+en:['“Read in the name of your Lord who created.”',"Surah Al-Alaq · 96:1",'Skip'],
+tr:['“Yaratan Rabbinin adıyla oku!”','Alak Suresi · 96:1','Geç'],
+de:['„Lies im Namen deines Herrn, Der erschaffen hat.“','Sure Al-Alaq · 96:1','Überspringen'],
+ar:['« اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ »','سورة العلق · ٩٦:١','تخطي']
+};
+let lang=(navigator.languages&&navigator.languages[0])||navigator.language||'fr';
+lang=lang.toLowerCase().split('-')[0];
+if(!translations[lang])lang='en';
+const [translation,reference,skipLabel]=translations[lang];
+const translationEl=document.getElementById('deen-opening-translation');
+const referenceEl=document.getElementById('deen-opening-reference');
+translationEl.textContent=translation;translationEl.lang=lang;translationEl.dir=lang==='ar'?'rtl':'auto';
+referenceEl.textContent=reference;skip.textContent=skipLabel;
 function close(){if(closed)return;closed=true;overlay.classList.add('deen-opening-done');overlay.setAttribute('aria-hidden','true');setTimeout(()=>overlay.remove(),500)}
 skip.addEventListener('click',close);
 setTimeout(close,window.matchMedia('(prefers-reduced-motion: reduce)').matches?1600:4800);
