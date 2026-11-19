@@ -9,7 +9,10 @@ self.addEventListener('install', event => {
       try { await cache.add(path); } catch (error) { console.warn('Deen One: offline asset unavailable', path, error); }
     }));
     // The main page must be available before activating the new offline worker.
-    if (!(await cache.match('./vision.html'))) throw new Error('Deen One: main page not cached');
+    if (!(await cache.match('./vision.html'))) {
+      await caches.delete(CACHE);
+      throw new Error('Deen One: main page not cached');
+    }
   }).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
