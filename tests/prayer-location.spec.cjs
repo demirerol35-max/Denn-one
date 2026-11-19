@@ -82,3 +82,23 @@ test('first visit defaults to manual mode without requesting GPS', async ({ page
   await expect(page.locator('#prayer-manual-location')).toBeVisible();
   await expect(page.locator('input[name="prayer-location-choice"][value="auto"]')).not.toBeChecked();
 });
+
+test('clearing manual city removes stale prayer times from home', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('deen-home-location-mode','manual');
+    localStorage.setItem('deen-prayer-location',JSON.stringify({city:'Mulhouse',country:'FR',method:'12'}));
+  });
+  await page.route('https://api.aladhan.com/**', async route => {
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+      code:200,data:{timings:{Fajr:'05:30',Sunrise:'07:00',Dhuhr:'12:30',Asr:'15:30',Maghrib:'18:30',Isha:'20:00'},
+      meta:{timezone:'Europe/Paris',latitude:47.75,longitude:7.33,method:{id:12}}}
+    })});
+  });
+  await page.goto(url);
+  await page.evaluate(() => { document.querySelector('#prayer').hidden=false; });
+  await page.locator('#prayer-city').fill('');
+  await page.locator('#prayer-city').dispatchEvent('change');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('deen-prayer-location')||'null')?.city)).toBe('');
+  await expect(page.locator('#home-prayer-times')).toBeEmpty();
+  await expect(page.locator('#home-prayer-place')).toContainText('Choisissez une ville');
+});
