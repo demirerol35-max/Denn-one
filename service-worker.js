@@ -81,7 +81,12 @@ self.addEventListener('push', event => {
 // schedule notifications: Android background delivery requires a push source.
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const target = new URL('./vision.html#prayer', self.registration.scope).href;
+  // Route prayer alerts to Prayer; ordinary/test notifications to the home screen.
+  // Never follow an arbitrary URL supplied in a notification payload.
+  const note = event.notification;
+  const isPrayer = note.data?.kind === 'prayer' ||
+    (typeof note.tag === 'string' && (note.tag.startsWith('deen-one-prayer-') || note.tag.startsWith('deen-prayer-')));
+  const target = new URL(isPrayer ? './vision.html#prayer' : './vision.html#home', self.registration.scope).href;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({type: 'window', includeUncontrolled: true});
     const existing = windows.find(client => {
