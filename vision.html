@@ -502,7 +502,7 @@ window.addEventListener('hashchange',()=>setTimeout(autoLoad,0));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(autoLoad,0)});
 window.addEventListener('online',()=>setTimeout(autoLoad,0));
 city.addEventListener('change',prayerSettingsChanged);
-country.addEventListener('change',()=>{city.value='';suggestions.replaceChildren();suggestions.hidden=true;prayerSettingsChanged()});
+country.addEventListener('change',prayerSettingsChanged);
 city.addEventListener('input',()=>{activeGpsCoords=null;lastAutoDay='';prayerRequestId++;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();list.replaceChildren();qibla.hidden=true;status.textContent=prayerText(0)});
 country.addEventListener('input',()=>{activeGpsCoords=null;lastAutoDay='';prayerRequestId++;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();list.replaceChildren();qibla.hidden=true;status.textContent=prayerText(0)});
 method.addEventListener('change',prayerSettingsChanged);
@@ -550,7 +550,7 @@ function locateHome(force=false){
   }
  },()=>{gpsRequestPending=false;/* Saved city remains the fallback. */},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
 }
-load();locateHome();document.addEventListener('visibilitychange',()=>{if(!document.hidden){load();locateHome()}});document.querySelectorAll('[data-go="home"]').forEach(b=>b.addEventListener('click',load));document.querySelector('#prayer-load').addEventListener('click',()=>setTimeout(load,1200));document.querySelectorAll('[data-tab="home"]').forEach(b=>b.addEventListener('click',()=>{load();locateHome(true)}));
+load();document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});document.querySelectorAll('[data-go="home"]').forEach(b=>b.addEventListener('click',load));document.querySelector('#prayer-load').addEventListener('click',()=>setTimeout(load,1200));document.querySelectorAll('[data-tab="home"]').forEach(b=>b.addEventListener('click',load));
 // Keep dynamically rendered prayer labels in sync with the selected language.
 document.getElementById('app-language')?.addEventListener('change',()=>queueMicrotask(load));
 // Refresh today's prayer schedule after local midnight while the page stays open.
