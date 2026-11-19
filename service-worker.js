@@ -42,7 +42,8 @@ self.addEventListener('push', event => {
     // The sending service should include a Unix-millisecond scheduledAt value.
     if (!Number.isSafeInteger(data.scheduledAt)) return;
     const delay = Date.now() - data.scheduledAt;
-    if (delay > 10 * 60 * 1000 || delay < -2 * 60 * 1000) return;
+    // Never announce a prayer before its scheduled time; reject significantly late deliveries.
+    if (delay < 0 || delay > 10 * 60 * 1000) return;
     const prayerNames = {
       fr: { Fajr: 'Fajr', Dhuhr: 'Dhuhr', Asr: 'Asr', Maghrib: 'Maghrib', Isha: 'Icha' },
       tr: { Fajr: 'Sabah', Dhuhr: 'Öğle', Asr: 'İkindi', Maghrib: 'Akşam', Isha: 'Yatsı' },
