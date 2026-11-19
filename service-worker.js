@@ -61,7 +61,7 @@ self.addEventListener('push', event => {
     const lang = Object.prototype.hasOwnProperty.call(messages, data.lang) ? data.lang : 'fr';
     const title = 'Deen One · ' + prayerNames[lang][data.prayer];
     const options = {
-      body: typeof data.body === 'string' ? data.body.slice(0, 160) : messages[lang],
+      body: messages[lang],
       icon: './deen-one-icon.svg',
       badge: './deen-one-icon.svg',
       tag: 'deen-one-prayer-' + data.prayer + '-' + (data.scheduledAt),
@@ -70,6 +70,9 @@ self.addEventListener('push', event => {
       timestamp: data.scheduledAt,
       data: { url: new URL('./vision.html#prayer', self.registration.scope).href }
     };
+    // Duplicate push deliveries should not vibrate or alert twice.
+    const existing = await self.registration.getNotifications({ tag: options.tag });
+    if (existing.length) return;
     await self.registration.showNotification(title, options);
   })());
 });
