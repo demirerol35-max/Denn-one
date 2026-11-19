@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {prayerInstant,buildPrayerMessages,deliveryKey} from './prayer-scheduler.mjs';
+import {prayerInstant,buildPrayerMessages,deliveryKey,duePrayerMessages} from './prayer-scheduler.mjs';
 
 test('Paris winter and summer offsets',()=>{
   assert.equal(new Date(prayerInstant('2026-01-15','12:30','Europe/Paris')).toISOString(),'2026-01-15T11:30:00.000Z');
@@ -25,4 +25,15 @@ test('bad time, timezone, date are rejected',()=>{
   assert.throws(()=>prayerInstant('2026-02-30','12:00','Europe/Paris'));
   assert.throws(()=>prayerInstant('2026-11-19','25:00','Europe/Paris'));
   assert.throws(()=>prayerInstant('2026-11-19','12:00','Fake/Zone'));
+});
+
+test('due alerts are never sent early or more than ten minutes late',()=>{
+  const now=Date.parse('2026-11-19T12:00:00Z');
+  const mk=(prayer,offset)=>({type:'prayer',prayer,lang:'fr',scheduledAt:now+offset});
+  const messages=[
+    mk('Fajr',-10*60*1000),mk('Dhuhr',0),
+    mk('Asr',60*1000),mk('Maghrib',-10*60*1000-1)
+  ];
+  assert.deepEqual(duePrayerMessages(messages,now).map(m=>m.prayer),['Fajr','Dhuhr']);
+  assert.throws(()=>duePrayerMessages(messages,now,-1),TypeError);
 });
