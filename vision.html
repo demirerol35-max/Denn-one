@@ -594,7 +594,7 @@ locationModeSelect?.addEventListener('change',()=>{
  manualCitySelected=locationModeSelect.value==='manual';
  localStorage.setItem('deen-home-location-mode',manualCitySelected?'manual':'auto');
  sessionGps=null;gpsCity='';gpsCityRequest++;lastGpsCheck=0;
- if(manualCitySelected)load();else{load();locateHome(true)}
+ load();if(!manualCitySelected)locateHome(true)
 });
 // Home prayer times use current location when permission is granted; saved city remains fallback.
 async function resolveGpsCity(latitude,longitude){
@@ -611,7 +611,7 @@ async function resolveGpsCity(latitude,longitude){
   if(sessionGps&&gpsCity){place.textContent=gpsCity+' · GPS'}
  }catch(e){/* Keep the GPS label when reverse geocoding is unavailable. */}
 }
-async function load(){const request=++latestLoad;window.dispatchEvent(new CustomEvent('deen-prayer-schedule-cleared'));const c=config();place.textContent=sessionGps?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):(({fr:'Ville enregistrée (GPS indisponible) : ',en:'Saved city (GPS unavailable): ',tr:'Kayıtlı şehir (GPS kullanılamıyor): ',de:'Gespeicherte Stadt (GPS nicht verfügbar): ',ar:'المدينة المحفوظة (الموقع غير متاح): '}[localStorage.getItem('deen-app-language')]||'Ville enregistrée (GPS indisponible) : ')+c.city+', '+c.country);strip.textContent=homePrayerText(1);next.textContent='';try{const countryInput=String(c.country||'FR').trim();
+async function load(){const request=++latestLoad;window.dispatchEvent(new CustomEvent('deen-prayer-schedule-cleared'));const c=config();if(!manualCitySelected&&!sessionGps){place.textContent=({fr:'En attente du GPS…',en:'Waiting for GPS…',tr:'GPS bekleniyor…',de:'Warte auf GPS…',ar:'بانتظار GPS…'}[localStorage.getItem('deen-app-language')]||'En attente du GPS…');strip.textContent=homePrayerText(1);next.textContent='';return;}place.textContent=sessionGps?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):(({fr:'Ville enregistrée (GPS indisponible) : ',en:'Saved city (GPS unavailable): ',tr:'Kayıtlı şehir (GPS kullanılamıyor): ',de:'Gespeicherte Stadt (GPS nicht verfügbar): ',ar:'المدينة المحفوظة (الموقع غير متاح): '}[localStorage.getItem('deen-app-language')]||'Ville enregistrée (GPS indisponible) : ')+c.city+', '+c.country);strip.textContent=homePrayerText(1);next.textContent='';try{const countryInput=String(c.country||'FR').trim();
 const countryAliases={FRANCE:'FR',TURQUIE:'TR',TURKEY:'TR',TÜRKIYE:'TR',TURKIYE:'TR',GERMANY:'DE',ALLEMAGNE:'DE',SWITZERLAND:'CH',SUISSE:'CH',BELGIUM:'BE',BELGIQUE:'BE',MOROCCO:'MA',MAROC:'MA',ALGERIA:'DZ',ALGÉRIE:'DZ',ALGERIE:'DZ',TUNISIA:'TN',TUNISIE:'TN',EGYPT:'EG',EGYPTE:'EG','SAUDI ARABIA':'SA','ARABIE SAOUDITE':'SA','UNITED KINGDOM':'GB','ROYAUME-UNI':'GB','UNITED STATES':'US','ÉTATS-UNIS':'US'};
 const countryCode=countryAliases[countryInput.toUpperCase()]||countryInput.toUpperCase();
 const countryMap={FR:'France',TR:'Turkey',DE:'Germany',CH:'Switzerland',BE:'Belgium',MA:'Morocco',DZ:'Algeria',TN:'Tunisia',EG:'Egypt',SA:'Saudi Arabia',GB:'United Kingdom',US:'United States'};
@@ -643,19 +643,16 @@ function locateHome(force=false){
    if(moved){sessionGps={latitude,longitude};gpsCity='';load();resolveGpsCity(latitude,longitude)}
    else if(!gpsCity){resolveGpsCity(sessionGps.latitude,sessionGps.longitude)}
   }
- },error=>{gpsRequestPending=false;if(error?.code===1)gpsDeniedForSession=true;/* Saved city remains the fallback. */},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
+ },error=>{gpsRequestPending=false;if(error?.code===1)gpsDeniedForSession=true;if(!manualCitySelected&&!sessionGps){place.textContent=({fr:'GPS indisponible : choisissez Position manuelle dans Prière',en:'GPS unavailable: choose Manual location in Prayer',tr:'GPS kullanılamıyor: Namaz bölümünde Manuel konumu seçin',de:'GPS nicht verfügbar: manuellen Standort in Gebet wählen',ar:'GPS غير متاح: اختر الموقع اليدوي في الصلاة'}[localStorage.getItem('deen-app-language')]||'GPS indisponible : choisissez Position manuelle dans Prière');strip.textContent=homePrayerText(7)}},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
 }
 // Ask for current location on first home visit; browsers retain the user's choice.
 // On a fresh page load, wait briefly for the authorized GPS fix before
 // showing a saved-city timetable. Never persist coordinates to storage.
-if(navigator.geolocation&&window.isSecureContext){
-  locateHome();
-  setTimeout(()=>{if(!sessionGps)load()},1800);
-}else load();
+if(manualCitySelected)load();else if(navigator.geolocation&&window.isSecureContext){locateHome();load()}else load();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){locateHome();if(sessionGps)load()}});
 
 document.querySelectorAll('[data-go="home"]').forEach(b=>b.addEventListener('click',()=>{load();locateHome()}));
-document.querySelector('#prayer-load').addEventListener('click',()=>{setTimeout(load,1200);locateHome(true)});
+document.querySelector('#prayer-load').addEventListener('click',()=>{if(manualCitySelected)setTimeout(load,1200);else locateHome(true)});
 // An explicit city selection must not be immediately overwritten by GPS.
 window.addEventListener('deen-prayer-mode-changed',e=>{
  manualCitySelected=e.detail.mode==='manual';if(locationModeSelect)locationModeSelect.value=e.detail.mode;
