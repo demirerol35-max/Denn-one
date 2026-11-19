@@ -445,7 +445,9 @@ function fillPrayerCountries(){
  const label=code=>code==='XK'?'Kosovo':names.of(code);
  const current=countryPicker.value||'FR';
  countryPicker.replaceChildren();
- const groups=[{name:{fr:'Europe',en:'Europe',tr:'Avrupa',de:'Europa',ar:'أوروبا'}[lang]||'Europe',codes:europeCountryCodes},{name:{fr:'Pays membres de l’OCI (hors Europe)',en:'OIC member states (outside Europe)',tr:'İİT üyesi ülkeler (Avrupa dışı)',de:'OIC-Mitgliedstaaten (außerhalb Europas)',ar:'دول منظمة التعاون الإسلامي (خارج أوروبا)'}[lang]||'Pays membres de l’OCI',codes:oicCountryCodes.filter(code=>!europeCountryCodes.includes(code))},{name:{fr:'Autres',en:'Other',tr:'Diğer',de:'Weitere',ar:'أخرى'}[lang]||'Autres',codes:worldCountryCodes.filter(code=>!europeCountryCodes.includes(code)&&!oicCountryCodes.includes(code))}];
+ const uniqueWorldCodes=[...new Set(worldCountryCodes)];
+ const groupedCodes=new Set([...europeCountryCodes,...oicCountryCodes]);
+ const groups=[{name:{fr:'Europe',en:'Europe',tr:'Avrupa',de:'Europa',ar:'أوروبا'}[lang]||'Europe',codes:europeCountryCodes},{name:{fr:'Pays membres de l’OCI (hors Europe)',en:'OIC member states (outside Europe)',tr:'İİT üyesi ülkeler (Avrupa dışı)',de:'OIC-Mitgliedstaaten (außerhalb Europas)',ar:'دول منظمة التعاون الإسلامي (خارج أوروبا)'}[lang]||'Pays membres de l’OCI',codes:oicCountryCodes.filter(code=>!europeCountryCodes.includes(code))},{name:{fr:'Autres',en:'Other',tr:'Diğer',de:'Weitere',ar:'أخرى'}[lang]||'Autres',codes:uniqueWorldCodes.filter(code=>!groupedCodes.has(code))}];
  for(const group of groups){const optgroup=document.createElement('optgroup');optgroup.label=group.name;for(const code of group.codes.slice().sort((a,b)=>label(a).localeCompare(label(b),locale))){const option=document.createElement('option');option.value=code;option.textContent=flag(code)+' '+label(code);optgroup.append(option)}countryPicker.append(optgroup)}
  countryPicker.value=current;if(!countryPicker.value)countryPicker.value='FR';
 }
