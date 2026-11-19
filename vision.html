@@ -532,7 +532,7 @@ async function resolveGpsCity(latitude,longitude){
   if(sessionGps&&gpsCity){place.textContent=gpsCity+' · GPS';try{localStorage.setItem('deen-home-last-gps',JSON.stringify({...sessionGps,city:gpsCity,savedAt:Date.now()}))}catch(e){}}
  }catch(e){/* Keep the GPS label when reverse geocoding is unavailable. */}
 }
-async function load(){const request=++latestLoad;const c=config();place.textContent=sessionGps?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):homePrayerText(0)+c.city+', '+c.country;strip.textContent=homePrayerText(1);next.textContent='';try{const countryCode=String(c.country||'FR').toUpperCase();
+async function load(){const request=++latestLoad;window.dispatchEvent(new CustomEvent('deen-prayer-schedule-cleared'));const c=config();place.textContent=sessionGps?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):homePrayerText(0)+c.city+', '+c.country;strip.textContent=homePrayerText(1);next.textContent='';try{const countryCode=String(c.country||'FR').toUpperCase();
 const countryMap={FR:'France',TR:'Turkey',DE:'Germany',CH:'Switzerland',BE:'Belgium',MA:'Morocco',DZ:'Algeria',TN:'Tunisia',EG:'Egypt',SA:'Saudi Arabia',GB:'United Kingdom',US:'United States'};
 const autoMethods={FR:'12',TR:'13',DE:'3',CH:'3',BE:'3',MA:'3',DZ:'3',TN:'3',EG:'5',SA:'4',GB:'3',US:'2'};
 const effectiveMethod=c.method&&c.method!=='auto'?c.method:(autoMethods[countryCode]||'3');
@@ -801,6 +801,7 @@ else{src=v==='voice-simple'?'https://commons.wikimedia.org/wiki/Special:Redirect
 preview=new Audio();preview.preload='auto';preview.src=src;preview.onended=()=>{stopPreview();msg.textContent=adhanText(9)};preview.onerror=()=>{stopPreview();msg.textContent=adhanText(10)};await preview.play();$('adhan-test-sound').textContent=adhanText(13);msg.textContent=adhanText(11)+voice.options[voice.selectedIndex].text+'.'
 }catch(e){stopPreview();msg.textContent=adhanText(12)}
 });
+window.addEventListener('deen-prayer-schedule-cleared',()=>{schedule=null});
 window.addEventListener('deen-prayer-timings',e=>{schedule=e.detail;check()});
 function check(){if(!schedule)return;const p=saved();if(!p.auto&&!p.notify)return;const d=new Date(),tz=schedule.timezone;let stamp;try{stamp=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d)}catch(e){return}
 const dayParts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:tz,day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));const localDate=dayParts.day+'-'+dayParts.month+'-'+dayParts.year;if(schedule.date&&schedule.date!==localDate)return;const parts=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d);const dateParts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));const date=dateParts.year+'-'+dateParts.month+'-'+dateParts.day;
