@@ -57,3 +57,19 @@ export function deliveryKey(subscriptionId,message) {
     throw new TypeError('Invalid prayer message');
   return subscriptionId+'|'+message.prayer+'|'+message.scheduledAt;
 }
+
+/**
+ * Select due Web Push messages without sending early or excessively late.
+ * The caller must persist deliveryKey() atomically before attempting delivery
+ * and use a server-side retry/outbox policy for failures.
+ */
+export function duePrayerMessages(messages, now=Date.now(), graceMs=10*60*1000) {
+  if (!Array.isArray(messages) || !Number.isSafeInteger(now) ||
+      !Number.isSafeInteger(graceMs) || graceMs<0)
+    throw new TypeError('Invalid scheduler arguments');
+  return messages.filter(message =>
+    message && PRAYERS.includes(message.prayer) &&
+    Number.isSafeInteger(message.scheduledAt) &&
+    message.scheduledAt<=now && now-message.scheduledAt<=graceMs
+  );
+}
