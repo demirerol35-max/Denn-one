@@ -538,7 +538,9 @@ async function resolveGpsCity(latitude,longitude){
   if(sessionGps&&gpsCity){place.textContent=gpsCity+' · GPS'}
  }catch(e){/* Keep the GPS label when reverse geocoding is unavailable. */}
 }
-async function load(){const request=++latestLoad;window.dispatchEvent(new CustomEvent('deen-prayer-schedule-cleared'));const c=config();place.textContent=sessionGps?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):homePrayerText(0)+c.city+', '+c.country;strip.textContent=homePrayerText(1);next.textContent='';try{const countryCode=String(c.country||'FR').toUpperCase();
+async function load(){const request=++latestLoad;window.dispatchEvent(new CustomEvent('deen-prayer-schedule-cleared'));const c=config();place.textContent=sessionGps?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):homePrayerText(0)+c.city+', '+c.country;strip.textContent=homePrayerText(1);next.textContent='';try{const countryInput=String(c.country||'FR').trim();
+const countryAliases={FRANCE:'FR',TURQUIE:'TR',TURKEY:'TR',TÜRKIYE:'TR',TURKIYE:'TR',GERMANY:'DE',ALLEMAGNE:'DE',SWITZERLAND:'CH',SUISSE:'CH',BELGIUM:'BE',BELGIQUE:'BE',MOROCCO:'MA',MAROC:'MA',ALGERIA:'DZ',ALGÉRIE:'DZ',ALGERIE:'DZ',TUNISIA:'TN',TUNISIE:'TN',EGYPT:'EG',EGYPTE:'EG','SAUDI ARABIA':'SA','ARABIE SAOUDITE':'SA','UNITED KINGDOM':'GB','ROYAUME-UNI':'GB','UNITED STATES':'US','ÉTATS-UNIS':'US'};
+const countryCode=countryAliases[countryInput.toUpperCase()]||countryInput.toUpperCase();
 const countryMap={FR:'France',TR:'Turkey',DE:'Germany',CH:'Switzerland',BE:'Belgium',MA:'Morocco',DZ:'Algeria',TN:'Tunisia',EG:'Egypt',SA:'Saudi Arabia',GB:'United Kingdom',US:'United States'};
 const autoMethods={FR:'12',TR:'13',DE:'3',CH:'3',BE:'3',MA:'3',DZ:'3',TN:'3',EG:'5',SA:'4',GB:'3',US:'2'};
 const effectiveMethod=c.method&&c.method!=='auto'?c.method:(autoMethods[countryCode]||'3');
