@@ -517,7 +517,7 @@ const homePrayerMessages={"fr":["Ville : ","Chargement des horaires…","Prochai
 const keys=[['Fajr','Fajr'],['Dhuhr','Dhuhr'],['Asr','Asr'],['Maghrib','Maghrib'],['Isha','Isha']];function config(){try{return JSON.parse(localStorage.getItem('deen-prayer-location')||'null')||{city:'Mulhouse',country:'France',method:'12'}}catch(e){return {city:'Mulhouse',country:'France',method:'12'}}}
 async function fetchPrayer(url){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000);try{return await fetch(url,{signal:controller.signal})}finally{clearTimeout(timer)}}
 let latestLoad=0,lastScheduleDate=null,lastScheduleTimezone=null,sessionGps=null,gpsCity='',gpsCityRequest=0;
-// Do not silently reuse GPS coordinates from a previous visit. The user chooses location explicitly.
+// Home prayer times use current location when permission is granted; saved city remains fallback.
 async function resolveGpsCity(latitude,longitude){
  const request=++gpsCityRequest;gpsCity='';
  try{
@@ -529,7 +529,7 @@ async function resolveGpsCity(latitude,longitude){
   const data=await response.json();
   if(request!==gpsCityRequest||!sessionGps||Math.abs(sessionGps.latitude-latitude)>0.001||Math.abs(sessionGps.longitude-longitude)>0.001)return;
   gpsCity=[data.city||data.locality||data.principalSubdivision||'',data.countryName||''].filter(Boolean).join(', ').slice(0,110);
-  if(sessionGps&&gpsCity){place.textContent=gpsCity+' · GPS';try{localStorage.setItem('deen-home-last-gps',JSON.stringify({...sessionGps,city:gpsCity,savedAt:Date.now()}))}catch(e){}}
+  if(sessionGps&&gpsCity){place.textContent=gpsCity+' · GPS'}
  }catch(e){/* Keep the GPS label when reverse geocoding is unavailable. */}
 }
 async function load(){const request=++latestLoad;window.dispatchEvent(new CustomEvent('deen-prayer-schedule-cleared'));const c=config();place.textContent=sessionGps?(gpsCity?gpsCity+' · GPS':({fr:'Position GPS',en:'GPS location',tr:'GPS konumu',de:'GPS-Standort',ar:'موقع GPS'}[localStorage.getItem('deen-app-language')]||'Position GPS')):homePrayerText(0)+c.city+', '+c.country;strip.textContent=homePrayerText(1);next.textContent='';try{const countryCode=String(c.country||'FR').toUpperCase();
@@ -549,12 +549,17 @@ function locateHome(force=false){
   if(Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180){
    const moved=!sessionGps||Math.abs(latitude-sessionGps.latitude)>0.001||Math.abs(longitude-sessionGps.longitude)>0.001;
    sessionGps={latitude,longitude};
-   try{localStorage.setItem('deen-home-last-gps',JSON.stringify({latitude,longitude,city:moved?'':gpsCity,savedAt:Date.now()}))}catch(e){}
    if(moved){gpsCity='';load();resolveGpsCity(latitude,longitude)}else if(!gpsCity){resolveGpsCity(latitude,longitude)}
   }
  },()=>{gpsRequestPending=false;/* Saved city remains the fallback. */},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
 }
-load();document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});document.querySelectorAll('[data-go="home"]').forEach(b=>b.addEventListener('click',load));document.querySelector('#prayer-load').addEventListener('click',()=>setTimeout(load,1200));window.addEventListener('deen-prayer-location-changed',()=>{sessionGps=null;gpsCity='';load()});document.querySelectorAll('[data-tab="home"]').forEach(b=>b.addEventListener('click',load));
+// Ask for current location on first home visit; browsers retain the user's choice.
+load();locateHome();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){load();locateHome()}});
+document.querySelectorAll('[data-go="home"]').forEach(b=>b.addEventListener('click',()=>{load();locateHome()}));
+document.querySelector('#prayer-load').addEventListener('click',()=>{setTimeout(load,1200);locateHome(true)});
+window.addEventListener('deen-prayer-location-changed',()=>{sessionGps=null;gpsCity='';load();locateHome()});
+document.querySelectorAll('[data-tab="home"]').forEach(b=>b.addEventListener('click',()=>{load();locateHome()}));
 // Keep dynamically rendered prayer labels in sync with the selected language.
 document.getElementById('app-language')?.addEventListener('change',()=>queueMicrotask(load));
 // Refresh today's prayer schedule after local midnight while the page stays open.
