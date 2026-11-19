@@ -70,3 +70,15 @@ test('manual city updates the shared location and home requests the chosen count
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('deen-prayer-location')||'null')?.city)).toBe('Strasbourg');
   await expect.poll(() => requests.some(x => x.includes('Strasbourg'))).toBeTruthy();
 });
+
+test('first visit defaults to manual mode without requesting GPS', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.removeItem('deen-home-location-mode');
+    localStorage.removeItem('deen-prayer-location');
+  });
+  await page.goto(url);
+  await page.evaluate(() => { document.querySelector('#prayer').hidden=false; });
+  await expect(page.locator('input[name="prayer-location-choice"][value="manual"]')).toBeChecked();
+  await expect(page.locator('#prayer-manual-location')).toBeVisible();
+  await expect(page.locator('input[name="prayer-location-choice"][value="auto"]')).not.toBeChecked();
+});
