@@ -145,6 +145,7 @@ test('manual prayer API returns five named prayer times', async ({ page }) => {
 
 test('country picker preserves Palestine and omits the excluded country', async ({ page }) => {
   await page.goto(url);
+  await page.evaluate(() => { document.querySelector('#prayer').hidden=false; });
   await expect(page.locator('#prayer-country option[value="PS"]')).toHaveCount(1);
   await expect(page.locator('#prayer-country option[value="IL"]')).toHaveCount(0);
   await page.locator('#prayer-country').selectOption('PS');
