@@ -74,3 +74,23 @@ test('unknown language falls back to French', async () => {
   await app.push({ type: 'prayer', prayer: 'Isha', lang: 'xx', scheduledAt: now });
   assert.match(app.shown[0].title, /Icha/);
 });
+
+test('supports all five interface languages and Arabic direction', async () => {
+  const now = Date.now();
+  for (const lang of ['fr', 'tr', 'ar', 'en', 'de']) {
+    const app = setup(now);
+    await app.push({ type: 'prayer', prayer: 'Fajr', lang, scheduledAt: now });
+    assert.equal(app.shown.length, 1, lang);
+    assert.equal(app.shown[0].options.lang, lang);
+    assert.equal(app.shown[0].options.dir, lang === 'ar' ? 'rtl' : 'ltr');
+  }
+});
+
+test('rejects unrelated push payloads', async () => {
+  const now = Date.now();
+  const app = setup(now);
+  await app.push({ type: 'advertisement', prayer: 'Fajr', scheduledAt: now });
+  await app.push({ type: 'prayer', prayer: 'Fajr', scheduledAt: 1.5 });
+  await app.push(null);
+  assert.equal(app.shown.length, 0);
+});
