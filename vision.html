@@ -526,7 +526,49 @@ status.textContent=prayerText(0);list.replaceChildren();qibla.hidden=true;
 city.focus();
 });
 function bearing(lat,lon){const toRad=x=>x*Math.PI/180, toDeg=x=>x*180/Math.PI,lat1=toRad(lat),lat2=toRad(21.4225),delta=toRad(39.8262-lon);return (toDeg(Math.atan2(Math.sin(delta),Math.cos(lat1)*Math.tan(lat2)-Math.sin(lat1)*Math.cos(delta)))+360)%360}
-const prayerMessages={"fr":["Indiquez une ville et un pays.","Chargement des horaires…","Impossible de récupérer les horaires actuellement. Vérifiez la connexion, la ville et le pays. Aucun horaire n’a été inventé.","Horaires selon votre position GPS","Horaires pour "," (heure locale du lieu).","Lever du soleil"],"en":["Enter a city and country.","Loading prayer times…","Prayer times are currently unavailable. Check your connection, city and country. No times have been invented.","Prayer times for your GPS location","Prayer times for "," (local time).","Sunrise"],"tr":["Şehir ve ülke girin.","Namaz vakitleri yükleniyor…","Namaz vakitlerine şu anda ulaşılamıyor. İnternet bağlantınızı, şehri ve ülkeyi kontrol edin. Tahmini vakit gösterilmez.","GPS konumunuza göre namaz vakitleri","Namaz vakitleri: "," (yerel saat).","Güneş"],"de":["Bitte Stadt und Land eingeben.","Gebetszeiten werden geladen…","Gebetszeiten sind derzeit nicht verfügbar. Prüfen Sie Verbindung, Stadt und Land. Es werden keine Zeiten erfunden.","Gebetszeiten für Ihren GPS-Standort","Gebetszeiten für "," (Ortszeit).","Sonnenaufgang"],"ar":["أدخل المدينة والبلد.","جارٍ تحميل مواقيت الصلاة…","مواقيت الصلاة غير متاحة حاليًا. تحقق من الاتصال والمدينة والبلد. لن نعرض أوقاتًا غير مؤكدة.","مواقيت الصلاة حسب موقع GPS","مواقيت الصلاة في "," (بالتوقيت المحلي).","الشروق"]};const prayerText=(index)=>{const lang=localStorage.getItem('deen-app-language')||'fr';return (prayerMessages[lang]||prayerMessages.fr)[index]};let prayerRequestId=0,activePrayerController=null,activeGeoController=null,prayerRetryAfter=0;async function loadPrayerTimes(coords){const requestId=++prayerRequestId;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();activePrayerController=null;activeGeoController=null;const c=city.value.trim(),co=country.value.trim();if(!coords&&(!c||!co)){status.textContent=prayerText(0);list.replaceChildren();qibla.hidden=true;lastAutoDay='';return}status.textContent=prayerText(1);list.replaceChildren();qibla.hidden=true;try{let resolved=coords;
+const prayerMessages={"fr":["Indiquez une ville et un pays.","Chargement des horaires…","Impossible de récupérer les horaires actuellement. Vérifiez la connexion, la ville et le pays. Aucun horaire n’a été inventé.","Horaires selon votre position GPS","Horaires pour "," (heure locale du lieu).","Lever du soleil"],"en":["Enter a city and country.","Loading prayer times…","Prayer times are currently unavailable. Check your connection, city and country. No times have been invented.","Prayer times for your GPS location","Prayer times for "," (local time).","Sunrise"],"tr":["Şehir ve ülke girin.","Namaz vakitleri yükleniyor…","Namaz vakitlerine şu anda ulaşılamıyor. İnternet bağlantınızı, şehri ve ülkeyi kontrol edin. Tahmini vakit gösterilmez.","GPS konumunuza göre namaz vakitleri","Namaz vakitleri: "," (yerel saat).","Güneş"],"de":["Bitte Stadt und Land eingeben.","Gebetszeiten werden geladen…","Gebetszeiten sind derzeit nicht verfügbar. Prüfen Sie Verbindung, Stadt und Land. Es werden keine Zeiten erfunden.","Gebetszeiten für Ihren GPS-Standort","Gebetszeiten für "," (Ortszeit).","Sonnenaufgang"],"ar":["أدخل المدينة والبلد.","جارٍ تحميل مواقيت الصلاة…","مواقيت الصلاة غير متاحة حاليًا. تحقق من الاتصال والمدينة والبلد. لن نعرض أوقاتًا غير مؤكدة.","مواقيت الصلاة حسب موقع GPS","مواقيت الصلاة في "," (بالتوقيت المحلي).","الشروق"]};const prayerText=(index)=>{const lang=localStorage.getItem('deen-app-language')||'fr';return (prayerMessages[lang]||prayerMessages.fr)[index]};let prayerRequestId=0,activePrayerController=null,activeGeoController=null,prayerRetryAfter=0;async function sendAndroidPrayerWeek({params,endpoint,firstDay,timezone,requestId,signal}){
+ const bridge=window.DeenOneAndroid;
+ if(!bridge||typeof bridge.postMessage!=='function'||!timezone)return;
+ const firstDate=firstDay?.date?.gregorian?.date||'';
+ const match=/^(\\d{2})-(\\d{2})-(\\d{4})$/.exec(firstDate);
+ if(!match)return;
+ const base=new Date(Date.UTC(Number(match[3]),Number(match[2])-1,Number(match[1])));
+ if(!Number.isFinite(base.getTime()))return;
+ const names=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
+ function parseDay(data){
+  if(!data||data.meta?.timezone!==timezone)return null;
+  const dateMatch=/^(\\d{2})-(\\d{2})-(\\d{4})$/.exec(data.date?.gregorian?.date||'');
+  if(!dateMatch)return null;
+  const timings={};
+  for(const name of names){
+   const m=/^([01]?\\d|2[0-3]):([0-5]\\d)/.exec(data.timings?.[name]||'');
+   if(!m)return null;
+   timings[name]=m[1].padStart(2,'0')+':'+m[2];
+  }
+  return {date:dateMatch[3]+'-'+dateMatch[2]+'-'+dateMatch[1],timezone,timings};
+ }
+ const first=parseDay(firstDay);
+ if(!first)return;
+ const days=[first];
+ for(let offset=1;offset<7;offset++){
+  if(signal.aborted||requestId!==prayerRequestId)return;
+  const date=new Date(base.getTime()+offset*86400000);
+  const dd=String(date.getUTCDate()).padStart(2,'0');
+  const mm=String(date.getUTCMonth()+1).padStart(2,'0');
+  const yyyy=date.getUTCFullYear();
+  const url='https://api.aladhan.com/v1/'+endpoint+'/'+dd+'-'+mm+'-'+yyyy+'?'+params.toString();
+  const response=await fetch(url,{signal,cache:'no-store'});
+  if(!response.ok)return;
+  const json=await response.json();
+  if(json.code!==200)return;
+  const day=parseDay(json.data);
+  if(!day||day.date!==yyyy+'-'+mm+'-'+dd)return;
+  days.push(day);
+ }
+ if(!signal.aborted&&requestId===prayerRequestId)
+  bridge.postMessage(JSON.stringify({type:'scheduleWeek',payload:{timezone,days}}));
+}
+async function loadPrayerTimes(coords){const requestId=++prayerRequestId;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();activePrayerController=null;activeGeoController=null;const c=city.value.trim(),co=country.value.trim();if(!coords&&(!c||!co)){status.textContent=prayerText(0);list.replaceChildren();qibla.hidden=true;lastAutoDay='';return}status.textContent=prayerText(1);list.replaceChildren();qibla.hidden=true;try{let resolved=coords;
 if(!resolved&&selectedCity&&selectedCity.name===c&&selectedCity.countryCode===co&&Number.isFinite(selectedCity.latitude)&&Number.isFinite(selectedCity.longitude)){resolved={latitude:selectedCity.latitude,longitude:selectedCity.longitude};}
 if(!resolved&&!c){status.textContent=prayerText(0);return;}
 // Manual mode uses the same city-based AlAdhan request as the home screen.
@@ -556,6 +598,13 @@ if(window.DeenOneAndroid&&typeof window.DeenOneAndroid.postMessage==='function'&
    }));
   }
  }
+}
+// Obtain real daily API times, not copied estimates, for Android background alarms.
+if(confirmedTimezone&&window.DeenOneAndroid){
+ const weekController=new AbortController();
+ // A new prayer request invalidates this batch through requestId.
+ sendAndroidPrayerWeek({params,endpoint,firstDay:data.data,timezone:confirmedTimezone,
+  requestId,signal:weekController.signal}).catch(()=>{});
 }
 const selectedMethod=method.options[method.selectedIndex]?.textContent||'';const effectiveMethod=methodForCountry(Boolean(coords));const methodLabel=({fr:'Méthode',en:'Method',tr:'Yöntem',de:'Methode',ar:'طريقة الحساب'})[localStorage.getItem('deen-app-language')||'fr']||'Méthode';source.textContent=(coords?gpsText(1):gpsText(2)+c+', '+co)+(confirmedTimezone?' · '+confirmedTimezone:'')+' · '+methodLabel+': '+(method.value==='auto'?'Auto ('+effectiveMethod+')':selectedMethod);const apiLocation=data.data.meta;const geo=resolved||((apiLocation&&apiLocation.latitude!=null&&apiLocation.longitude!=null&&apiLocation.latitude!==''&&apiLocation.longitude!==''&&Number.isFinite(Number(apiLocation.latitude))&&Number.isFinite(Number(apiLocation.longitude))&&Math.abs(Number(apiLocation.latitude))<=90&&Math.abs(Number(apiLocation.longitude))<=180)?{latitude:Number(apiLocation.latitude),longitude:Number(apiLocation.longitude)}:null);if(geo&&geo.latitude!==''&&geo.longitude!==''&&geo.latitude!=null&&geo.longitude!=null&&Number.isFinite(Number(geo.latitude))&&Number.isFinite(Number(geo.longitude))&&Math.abs(Number(geo.latitude))<=90&&Math.abs(Number(geo.longitude))<=180){const angle=bearing(Number(geo.latitude),Number(geo.longitude));qibla.hidden=false;const qiblaLang=localStorage.getItem('deen-app-language')||'fr',qiblaMessages={fr:['Direction estimée de la Qibla : ','° dans le sens horaire depuis le nord géographique.','votre position'],en:['Estimated Qibla direction: ','° clockwise from true north.','your location'],tr:['Tahmini kıble yönü: ','° coğrafi kuzeyden saat yönünde.','konumunuz'],de:['Geschätzte Qibla-Richtung: ','° im Uhrzeigersinn ab geografisch Nord.','Ihr Standort'],ar:['اتجاه القبلة التقريبي: ','° باتجاه عقارب الساعة من الشمال الجغرافي.','موقعك']}[qiblaLang]||['Direction estimée de la Qibla : ','° dans le sens horaire depuis le nord géographique.','votre position'];qibla.textContent=qiblaMessages[0]+angle.toFixed(1)+qiblaMessages[1];window.dispatchEvent(new CustomEvent('deen-qibla-city',{detail:{angle,city:coords?qiblaMessages[2]:c,country:co}}))}if(!coords&&currentPrayerMode()==='manual'){try{
  const selected={city:c,country:co,method:method.value};
