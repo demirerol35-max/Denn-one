@@ -1126,6 +1126,12 @@ prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>mo
  if(webLimitation)webLimitation.hidden=true;
  if(browserDiagnostic)browserDiagnostic.hidden=true;
  if(browserDiagnosticResult)browserDiagnosticResult.hidden=true;
+ // These two buttons exercise browser Notification, not Android native alarms.
+ // Hide them in the APK rather than reporting a false "unsupported" error.
+ for(const id of ['adhan-test-notification','deen-test-ordinary-notification']){
+  const button=document.getElementById(id);
+  if(button)button.hidden=true;
+ }
  const translations={
   fr:['Vérification des rappels Android…','Rappels Android activés','Rappels Android désactivés','Autoriser les rappels Android','Désactiver les rappels Android','Autorisation des notifications refusée dans Android','Aucun horaire de prière enregistré','Les alarmes exactes ne sont pas autorisées : les rappels peuvent arriver en retard'],
   en:['Checking Android reminders…','Android reminders enabled','Android reminders disabled','Allow Android reminders','Disable Android reminders','Android notification permission denied','No prayer schedule saved','Exact alarms are not allowed: reminders may arrive late'],
