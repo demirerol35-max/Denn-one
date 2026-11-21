@@ -171,7 +171,10 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             !PrayerScheduleCoordinator.hasSchedule(context)) return
         val expectedAt = intent.getLongExtra("expectedAt", 0L)
         if (expectedAt <= 0L) return
-        val currentExpectedAt = PrayerScheduleCoordinator.expectedAlarmTime(context, prayer)
+        val weekDate = intent.getStringExtra("weekDate")
+        val currentExpectedAt = if (weekDate != null)
+            PrayerScheduleCoordinator.expectedWeekAlarmTime(context, weekDate, prayer)
+        else PrayerScheduleCoordinator.expectedAlarmTime(context, prayer)
         if (currentExpectedAt != expectedAt) return
         PrayerAlarms.notifyPrayer(context, prayer)
     }
