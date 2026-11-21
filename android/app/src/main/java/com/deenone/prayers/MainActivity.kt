@@ -187,6 +187,7 @@ class MainActivity : Activity() {
                         .put("hasSchedule", PrayerScheduleCoordinator.hasSchedule(this))
                         .put("notificationPermissionGranted",
                             PrayerAlarms.notificationsAllowed(this))
+                        .put("exactAlarmsAllowed", PrayerAlarms.exactAlarmsAllowed(this))
                         .toString()
                 )
             }
