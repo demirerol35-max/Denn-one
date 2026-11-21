@@ -82,4 +82,26 @@ await sandbox.sendAndroidPrayerWeek({
   timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
 });
 assert.equal(sent.length, 0, 'Invalid API times must not schedule alarms');
+
+// A network failure on one future date must not schedule an incomplete week.
+sandbox.fetch = async () => { throw new Error('Simulated offline API'); };
+await sandbox.sendAndroidPrayerWeek({
+  params:new URLSearchParams(),endpoint:'timingsByCity',firstDay,
+  timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
+});
+assert.equal(sent.length, 0, 'Network errors must not schedule incomplete weeks');
+
+// A changed timezone must never reuse prayer times from another location.
+sandbox.fetch = async () => ({
+  ok:true, json:async () => ({code:200,data:{
+    date:{gregorian:{date:'22-11-2026'}},
+    meta:{timezone:'Asia/Istanbul'},
+    timings:{Fajr:'05:30',Dhuhr:'12:30',Asr:'15:30',Maghrib:'18:30',Isha:'20:00'}
+  }})
+});
+await sandbox.sendAndroidPrayerWeek({
+  params:new URLSearchParams(),endpoint:'timingsByCity',firstDay,
+  timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
+});
+assert.equal(sent.length, 0, 'Timezone mismatch must not schedule alarms');
 console.log('OK: ' + scripts.length + ' inline scripts parse; weekly prayer bridge runtime checks pass.');
