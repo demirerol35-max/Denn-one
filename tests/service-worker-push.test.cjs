@@ -10,6 +10,7 @@ function setup(now = Date.now(), lookupFails = false) {
   const handlers = {};
   const shown = [];
   const existing = [];
+  const opened = [];
   const registration = {
     scope: 'https://example.org/app/',
     getNotifications: async () => { if (lookupFails) throw new Error('temporary lookup failure'); return existing; },
@@ -21,7 +22,7 @@ function setup(now = Date.now(), lookupFails = false) {
       location: { origin: 'https://example.org' },
       addEventListener: (name, handler) => { handlers[name] = handler; },
       skipWaiting: async () => {},
-      clients: { claim: async () => {} }
+      clients: { claim: async () => {}, matchAll: async () => [], openWindow: async url => { opened.push(url); } }
     },
     caches: {},
     URL, Request, Response, Set, Promise, console,
@@ -36,7 +37,12 @@ function setup(now = Date.now(), lookupFails = false) {
     });
     await pending;
   }
-  return { push, shown, existing };
+  async function click(notification) {
+    let pending;
+    handlers.notificationclick({ notification: { ...notification, close: () => {} }, waitUntil: promise => { pending = promise; } });
+    await pending;
+  }
+  return { push, shown, existing, opened, click };
 }
 
 test('valid prayer push displays localized notification', async () => {
@@ -120,4 +126,19 @@ test('temporary notification lookup failure does not suppress prayer reminder', 
   const app = setup(now, true);
   await app.push({ type: 'prayer', prayer: 'Fajr', lang: 'fr', scheduledAt: now });
   assert.equal(app.shown.length, 1);
+});
+
+test('tapping a prayer alert opens the prayer screen', async () => {
+  const now = Date.now();
+  const app = setup(now);
+  await app.push({ type: 'prayer', prayer: 'Fajr', scheduledAt: now });
+  await app.click(app.shown[0].options);
+  assert.equal(app.opened.length, 1);
+  assert.equal(app.opened[0], 'https://example.org/app/vision.html#prayer');
+});
+
+test('ordinary notification opens home without trusting payload URLs', async () => {
+  const app = setup();
+  await app.click({ tag: 'other', data: { url: 'https://malicious.example/' } });
+  assert.equal(app.opened[0], 'https://example.org/app/vision.html#home');
 });
