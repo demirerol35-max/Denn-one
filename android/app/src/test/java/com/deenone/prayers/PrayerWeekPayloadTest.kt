@@ -71,6 +71,20 @@ class PrayerWeekPayloadTest {
         assertTrue(PrayerWeekPayload.matchesDay(week, second))
     }
 
+    @Test fun doesNotMatchDayOutsideStoredWeek() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val week = PrayerWeekPayload.parse(batch(day(today), day(today.plusDays(1))))
+        val outside = PrayerSchedulePayload.parse(day(today.plusDays(2)))!!
+        assertFalse(PrayerWeekPayload.matchesDay(week, outside))
+    }
+
+    @Test fun doesNotMatchSameDateInAnotherTimezone() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val week = PrayerWeekPayload.parse(batch(day(today), day(today.plusDays(1))))
+        val changedZone = PrayerSchedulePayload.parse(day(today.plusDays(1), "Asia/Istanbul"))!!
+        assertFalse(PrayerWeekPayload.matchesDay(week, changedZone))
+    }
+
     @Test fun rejectsChangedPrayerTimesForSameDay() {
         val today = LocalDate.now(java.time.ZoneId.of(zone))
         val week = PrayerWeekPayload.parse(batch(day(today), day(today.plusDays(1))))
