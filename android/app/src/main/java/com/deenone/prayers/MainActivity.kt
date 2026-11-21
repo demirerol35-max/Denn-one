@@ -151,7 +151,15 @@ class MainActivity : Activity() {
                                     notificationConsentPending = true
                                     requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationRequestCode)
                                 } else {
-                                    PrayerScheduleCoordinator.setEnabled(this, true)
+                                    if (PrayerAlarms.notificationsAllowed(this)) {
+                                        PrayerScheduleCoordinator.setEnabled(this, true)
+                                    } else {
+                                        AlertDialog.Builder(this)
+                                            .setTitle("Notifications désactivées")
+                                            .setMessage("Les notifications de Deen One sont bloquées dans les paramètres Android. Autorise-les pour recevoir les rappels.")
+                                            .setPositiveButton("OK", null)
+                                            .show()
+                                    }
                                     refreshReminderStatusInWebView()
                                 }
                             }
@@ -198,7 +206,8 @@ class MainActivity : Activity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == notificationRequestCode) {
             if (notificationConsentPending &&
-                grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+                grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
+                PrayerAlarms.notificationsAllowed(this)) {
                 PrayerScheduleCoordinator.setEnabled(this, true)
             }
             refreshReminderStatusInWebView()
