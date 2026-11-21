@@ -51,7 +51,10 @@ object PrayerAlarms {
                     alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, scheduledPending)
                 }
             } catch (_: SecurityException) {
-                alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, scheduledPending)
+                // A second permission/security failure must not crash scheduling.
+                runCatching {
+                    alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, scheduledPending)
+                }
             }
         }
     }
@@ -118,7 +121,10 @@ object PrayerAlarms {
                         manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
                     }
                 } catch (_: SecurityException) {
-                    manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                    // Keep processing other prayers even if this alarm is denied.
+                    runCatching {
+                        manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                    }
                 }
             }
         }
