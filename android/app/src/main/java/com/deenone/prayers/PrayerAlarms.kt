@@ -176,6 +176,9 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             PrayerScheduleCoordinator.expectedWeekAlarmTime(context, weekDate, prayer)
         else PrayerScheduleCoordinator.expectedAlarmTime(context, prayer)
         if (currentExpectedAt != expectedAt) return
+        // A clock adjustment or an early delivery must never announce a prayer
+        // before its scheduled instant. Allow a small clock precision margin.
+        if (System.currentTimeMillis() < expectedAt - 60_000L) return
         PrayerAlarms.notifyPrayer(context, prayer)
     }
 }
