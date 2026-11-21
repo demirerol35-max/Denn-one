@@ -38,6 +38,21 @@ class PrayerWeekPayloadTest {
         assertNull(PrayerWeekPayload.parse(batch(*(0L..7L).map { day(today.plusDays(it)) }.toTypedArray())))
     }
 
+    @Test fun restoresUnexpiredBatchAfterMidnight() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val payload = batch(day(today.minusDays(1)), day(today))
+        assertNull(PrayerWeekPayload.parse(payload))
+        val restored = PrayerWeekPayload.parse(payload, requireToday = false)
+        assertNotNull(restored)
+        assertEquals(2, restored!!.days.size)
+    }
+
+    @Test fun rejectsFullyExpiredStoredBatch() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val payload = batch(day(today.minusDays(2)), day(today.minusDays(1)))
+        assertNull(PrayerWeekPayload.parse(payload, requireToday = false))
+    }
+
     @Test fun rejectsMalformedPrayerTimes() {
         val today = LocalDate.now(java.time.ZoneId.of(zone))
         assertNull(PrayerWeekPayload.parse(batch(day(today).replace("05:30", "25:30"))))
