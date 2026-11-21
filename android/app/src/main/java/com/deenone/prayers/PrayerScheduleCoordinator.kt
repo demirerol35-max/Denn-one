@@ -28,11 +28,7 @@ object PrayerScheduleCoordinator {
         // Only today's schedule is supported until multi-day alarms are implemented.
         // Save before scheduling so a later boot receiver can restore the schedule.
         val previousWeek = storedWeek(context)
-        val matchesWeek = previousWeek?.days?.firstOrNull { day ->
-            day.date == parsed.date
-        }?.let { day ->
-            day.timezone == parsed.timezone && day.timings == parsed.timings
-        } == true
+        val matchesWeek = PrayerWeekPayload.matchesDay(previousWeek, parsed)
         // A normal refresh of today's unchanged API times must not erase the
         // future alarms already saved for the coming days.
         if (matchesWeek) return true
