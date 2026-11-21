@@ -496,7 +496,7 @@ modeInputs.forEach(input=>input.addEventListener('change',()=>{
   navigator.geolocation.getCurrentPosition(pos=>{
    if(currentPrayerMode()!=='auto')return;
    const {latitude,longitude,accuracy}=pos.coords;
-   if(!Number.isFinite(accuracy)||accuracy>10000){status.textContent=modeWords()[3];return}
+   if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180||!Number.isFinite(accuracy)||accuracy>10000){status.textContent=modeWords()[3];return}
    activeGpsCoords={latitude,longitude};autoLoad();
   },()=>{status.textContent=modeWords()[3]},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
  }else{lastAutoDay='';prayerRetryAfter=0;autoLoad();}
@@ -623,7 +623,7 @@ lastScheduleDate=normalizedDate;lastScheduleTimezone=apiTz;window.dispatchEvent(
   if(sessionGps){sessionGps=null;gpsCity='';load();return;}
   strip.textContent=homePrayerText(7);next.textContent=homePrayerText(8);
 }}}
-window.addEventListener('deen-qibla-gps',event=>{if(localStorage.getItem('deen-home-location-mode')!=='auto')return;const {latitude,longitude}=event.detail||{};if(Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180){sessionGps={latitude,longitude};gpsCity='';load();resolveGpsCity(latitude,longitude)}});
+window.addEventListener('deen-qibla-gps',event=>{if(localStorage.getItem('deen-home-location-mode')!=='auto')return;const {latitude,longitude,accuracy}=event.detail||{};if(Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180&&Number.isFinite(accuracy)&&accuracy<=10000){sessionGps={latitude,longitude};gpsCity='';load();resolveGpsCity(latitude,longitude)}});
 let lastGpsCheck=0,gpsRequestPending=false,gpsDeniedForSession=false;
 function locateHome(force=false){
  if(localStorage.getItem('deen-home-location-mode')!=='auto'||manualCitySelected||!navigator.geolocation||!window.isSecureContext||gpsRequestPending||gpsDeniedForSession)return;
@@ -837,7 +837,7 @@ const qiblaMessages={"fr":["Qibla : ","° depuis le nord géographique"," · bou
 const normalize=n=>(n%360+360)%360;function direction(lat,lon){const rad=x=>x*Math.PI/180,deg=x=>x*180/Math.PI,a=rad(lat),b=rad(21.4225),d=rad(39.8262-lon);return normalize(deg(Math.atan2(Math.sin(d),Math.cos(a)*Math.tan(b)-Math.sin(a)*Math.cos(d))))}
 function render(){if(bearing===null)return;needle.style.transform='rotate('+normalize(bearing-(heading??0))+'deg)';label.textContent=qText(0)+bearing.toFixed(1)+qText(1)+(heading!==null?qText(2):'')}
 window.addEventListener('deen-qibla-city',e=>{if(active)return;bearing=e.detail.angle;heading=null;render();status.textContent=qText(3)+e.detail.city+qText(4)});
-function locate(){if(!navigator.geolocation){status.textContent=qText(5);return}status.textContent=qText(6);navigator.geolocation.getCurrentPosition(p=>{bearing=direction(p.coords.latitude,p.coords.longitude);active=true;render();window.dispatchEvent(new CustomEvent('deen-qibla-gps',{detail:{latitude:p.coords.latitude,longitude:p.coords.longitude}}));status.textContent=qText(7)+Math.round(p.coords.accuracy)+qText(8)+(!watching?qText(9):'');},()=>{status.textContent=qText(10)},{enableHighAccuracy:true,timeout:12000,maximumAge:60000})}
+function locate(){if(!navigator.geolocation){status.textContent=qText(5);return}status.textContent=qText(6);navigator.geolocation.getCurrentPosition(p=>{bearing=direction(p.coords.latitude,p.coords.longitude);active=true;render();window.dispatchEvent(new CustomEvent('deen-qibla-gps',{detail:{latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy}}));status.textContent=qText(7)+Math.round(p.coords.accuracy)+qText(8)+(!watching?qText(9):'');},()=>{status.textContent=qText(10)},{enableHighAccuracy:true,timeout:12000,maximumAge:60000})}
 $('qibla-locate').addEventListener('click',locate);
 function orient(e){if(!watching)return;let value=null;if(typeof e.webkitCompassHeading==='number'&&Number.isFinite(e.webkitCompassHeading))value=e.webkitCompassHeading;else if(e.absolute===true&&typeof e.alpha==='number')value=normalize(360-e.alpha);if(value===null)return;heading=normalize(value);render();status.textContent=qText(11)}
 async function activateOrientation(){try{if(typeof DeviceOrientationEvent==='undefined'){status.textContent=qText(12);return}if(typeof DeviceOrientationEvent.requestPermission==='function'){const permission=await DeviceOrientationEvent.requestPermission();if(permission!=='granted'){status.textContent=qText(13);return}}window.removeEventListener('deviceorientationabsolute',orient);window.removeEventListener('deviceorientation',orient);window.addEventListener('deviceorientationabsolute',orient);window.addEventListener('deviceorientation',orient);watching=true;status.textContent=qText(14)}catch(e){status.textContent=qText(15)}}
