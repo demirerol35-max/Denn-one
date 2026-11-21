@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'android/**'
+      - 'vision.html'
+      - 'scripts/check-prayer-week.mjs'
       - '.github/workflows/android-ci.yml'
   pull_request:
     paths:
@@ -22,6 +24,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+      - name: Validate web scripts and weekly prayer bridge
+        run: node ../scripts/check-prayer-week.mjs
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
