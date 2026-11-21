@@ -648,7 +648,9 @@ function locateHome(force=false){
 // On a fresh page load, wait briefly for the authorized GPS fix before
 // showing a saved-city timetable. Never persist coordinates to storage.
 if(manualCitySelected)load();else if(navigator.geolocation&&window.isSecureContext){locateHome();load()}else load();
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){locateHome();if(sessionGps)load()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){locateHome();load()}});
+// Retry prayer schedule and notifications when connectivity returns.
+window.addEventListener('online',()=>{if(!document.hidden){locateHome();load()}});
 
 document.querySelectorAll('[data-go="home"]').forEach(b=>b.addEventListener('click',()=>{load();locateHome()}));
 
