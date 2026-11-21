@@ -1,5 +1,8 @@
 package com.deenone.prayers
 
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
+import org.json.JSONObject
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
@@ -112,6 +115,37 @@ class MainActivity : Activity() {
         }
         root.addView(offlineNotice, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
+        // Only the trusted Deen One HTTPS origin can send native schedule messages.
+        // This avoids exposing a broad JavascriptInterface to arbitrary pages.
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            WebViewCompat.addWebMessageListener(
+                webView,
+                "DeenOneAndroid",
+                setOf("https://demirerol35-max.github.io")
+            ) { _, message, sourceOrigin, isMainFrame, replyProxy ->
+                if (!isMainFrame ||
+                    sourceOrigin.scheme != "https" ||
+                    sourceOrigin.host != "demirerol35-max.github.io" ||
+                    sourceOrigin.port != -1
+                ) return@addWebMessageListener
+                val request = runCatching { JSONObject(message.data ?: "") }.getOrNull()
+                val type = request?.optString("type")
+                val success = when (type) {
+                    "schedule" -> {
+                        val payload = request.optJSONObject("payload")?.toString()
+                        payload != null && PrayerScheduleCoordinator.update(this, payload)
+                    }
+                    "disable" -> {
+                        PrayerScheduleCoordinator.setEnabled(this, false)
+                        true
+                    }
+                    else -> false
+                }
+                replyProxy.postMessage(JSONObject().put("type", type ?: "")
+                    .put("ok", success).toString())
+            }
+        }
+
         if (savedInstanceState == null) {
             webView.loadUrl("https://demirerol35-max.github.io/Denn-one/vision.html")
         } else {
