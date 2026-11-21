@@ -7,7 +7,7 @@ import java.time.LocalTime
 
 /**
  * Validates the prayer schedule passed from the Deen One web layer.
- * This is a parser only: the Android WebView bridge is not connected yet.
+ * The trusted Android WebView bridge passes these validated values to native alarms.
  */
 object PrayerSchedulePayload {
     data class Schedule(
