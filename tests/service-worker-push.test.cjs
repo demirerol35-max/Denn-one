@@ -94,3 +94,23 @@ test('rejects unrelated push payloads', async () => {
   await app.push(null);
   assert.equal(app.shown.length, 0);
 });
+
+test('accepts prayer exactly at scheduled time and at ten-minute boundary', async () => {
+  const now = Date.now();
+  const app = setup(now);
+  await app.push({ type: 'prayer', prayer: 'Dhuhr', lang: 'en', scheduledAt: now });
+  await app.push({ type: 'prayer', prayer: 'Maghrib', lang: 'tr', scheduledAt: now - 10 * 60000 });
+  assert.equal(app.shown.length, 2);
+  assert.match(app.shown[0].title, /Dhuhr/);
+  assert.match(app.shown[1].title, /Akşam/);
+});
+
+test('notification tag uniquely identifies prayer and scheduled time', async () => {
+  const now = Date.now();
+  const app = setup(now);
+  await app.push({ type: 'prayer', prayer: 'Fajr', scheduledAt: now });
+  await app.push({ type: 'prayer', prayer: 'Dhuhr', scheduledAt: now });
+  assert.equal(app.shown.length, 2);
+  assert.notEqual(app.shown[0].options.tag, app.shown[1].options.tag);
+  assert.equal(app.shown[0].options.timestamp, now);
+});
