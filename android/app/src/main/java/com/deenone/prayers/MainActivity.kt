@@ -64,14 +64,22 @@ class MainActivity : Activity() {
                         callback.invoke(origin, false, false)
                         return
                     }
-                    if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    if (hasLocationPermission()) {
                         callback.invoke(origin, true, false)
                     } else {
                         pendingLocation?.let { (previousOrigin, previousCallback) ->
                             previousCallback.invoke(previousOrigin, false, false)
                         }
                         pendingLocation = origin to callback
-                        requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), locationRequestCode)
+                        // Android 12+ lets users choose approximate location.
+                        // Request both permissions so that choice works correctly.
+                        requestPermissions(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ),
+                            locationRequestCode
+                        )
                     }
                 }
             }
@@ -224,6 +232,10 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun hasLocationPermission(): Boolean =
+        checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
     private fun isTrustedPrayerPage(): Boolean {
         val page = runCatching { Uri.parse(webView.url ?: "") }.getOrNull()
         return page?.scheme == "https" &&
@@ -318,8 +330,7 @@ class MainActivity : Activity() {
             // permission prompt. Never grant location to a different page.
             callback.invoke(
                 origin,
-                grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
-                    isTrustedPrayerPage(),
+                hasLocationPermission() && isTrustedPrayerPage(),
                 false
             )
         }
