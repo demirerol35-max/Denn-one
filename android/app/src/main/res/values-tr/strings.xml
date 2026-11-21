@@ -7,4 +7,5 @@
     <string name="prayer_asr">İkindi</string>
     <string name="prayer_maghrib">Akşam</string>
     <string name="prayer_isha">Yatsı</string>
+    <string name="prayer_channel_name">Namaz hatırlatıcıları</string>
 </resources>
