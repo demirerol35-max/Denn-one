@@ -549,24 +549,22 @@ const prayerMessages={"fr":["Indiquez une ville et un pays.","Chargement des hor
  }
  const first=parseDay(firstDay);
  if(!first)return;
- const days=[first];
- for(let offset=1;offset<7;offset++){
-  if(signal.aborted||requestId!==prayerRequestId)return;
-  const date=new Date(base.getTime()+offset*86400000);
+ const remaining=await Promise.all(Array.from({length:6},async(_,index)=>{
+  if(signal.aborted||requestId!==prayerRequestId)return null;
+  const date=new Date(base.getTime()+(index+1)*86400000);
   const dd=String(date.getUTCDate()).padStart(2,'0');
   const mm=String(date.getUTCMonth()+1).padStart(2,'0');
   const yyyy=date.getUTCFullYear();
   const url='https://api.aladhan.com/v1/'+endpoint+'/'+dd+'-'+mm+'-'+yyyy+'?'+params.toString();
   const response=await fetch(url,{signal,cache:'no-store'});
-  if(!response.ok)return;
+  if(!response.ok)return null;
   const json=await response.json();
-  if(json.code!==200)return;
+  if(json.code!==200)return null;
   const day=parseDay(json.data);
-  if(!day||day.date!==yyyy+'-'+mm+'-'+dd)return;
-  days.push(day);
- }
- if(!signal.aborted&&requestId===prayerRequestId)
-  bridge.postMessage(JSON.stringify({type:'scheduleWeek',payload:{timezone,days}}));
+  return day&&day.date===yyyy+'-'+mm+'-'+dd?day:null;
+ }));
+ if(remaining.some(day=>!day)||signal.aborted||requestId!==prayerRequestId)return;
+ bridge.postMessage(JSON.stringify({type:'scheduleWeek',payload:{timezone,days:[first,...remaining]}}));
 }
 async function loadPrayerTimes(coords){const requestId=++prayerRequestId;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();activePrayerController=null;activeGeoController=null;const c=city.value.trim(),co=country.value.trim();if(!coords&&(!c||!co)){status.textContent=prayerText(0);list.replaceChildren();qibla.hidden=true;lastAutoDay='';return}status.textContent=prayerText(1);list.replaceChildren();qibla.hidden=true;try{let resolved=coords;
 if(!resolved&&selectedCity&&selectedCity.name===c&&selectedCity.countryCode===co&&Number.isFinite(selectedCity.latitude)&&Number.isFinite(selectedCity.longitude)){resolved={latitude:selectedCity.latitude,longitude:selectedCity.longitude};}
