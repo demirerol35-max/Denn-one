@@ -12,6 +12,11 @@ import java.time.ZoneId
 object PrayerWeekPayload {
     data class Week(val timezone: String, val days: List<PrayerSchedulePayload.Schedule>)
 
+    fun matchesDay(week: Week?, day: PrayerSchedulePayload.Schedule): Boolean =
+        week?.days?.firstOrNull { it.date == day.date }?.let {
+            it.timezone == day.timezone && it.timings == day.timings
+        } == true
+
     fun parse(json: String, requireToday: Boolean = true): Week? = runCatching {
         val root = JSONObject(json)
         val timezone = root.getString("timezone")
