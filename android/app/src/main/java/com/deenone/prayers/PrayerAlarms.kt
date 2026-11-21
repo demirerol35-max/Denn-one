@@ -71,7 +71,7 @@ object PrayerAlarms {
     fun ensureChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL, "Prayer reminders", NotificationManager.IMPORTANCE_HIGH)
+            NotificationChannel(CHANNEL, "Rappels de prière", NotificationManager.IMPORTANCE_HIGH)
         )
     }
 
@@ -80,11 +80,19 @@ object PrayerAlarms {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
         ensureChannel(context)
+        val openApp = PendingIntent.getActivity(
+            context, 0,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Prayer time: $prayer")
-            .setContentText("It is time for $prayer")
+            .setContentTitle("Heure de la prière : $prayer")
+            .setContentText("C’est l’heure de $prayer")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openApp)
             .setAutoCancel(true)
             .build()
         context.getSystemService(NotificationManager::class.java)
