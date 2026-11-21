@@ -104,4 +104,28 @@ await sandbox.sendAndroidPrayerWeek({
   timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
 });
 assert.equal(sent.length, 0, 'Timezone mismatch must not schedule alarms');
+
+// Date arithmetic must survive a leap day and a daylight-saving transition.
+sandbox.fetch = async url => {
+  const match = new RegExp('([0-9]{2})-([0-9]{2})-([0-9]{4})\\?').exec(url);
+  assert.ok(match);
+  return {ok:true,json:async () => ({code:200,data:{
+    date:{gregorian:{date:match[1]+'-'+match[2]+'-'+match[3]}},
+    meta:{timezone:'Europe/Paris'},
+    timings:{Fajr:'05:30',Dhuhr:'12:30',Asr:'15:30',Maghrib:'18:30',Isha:'20:00'}
+  }})};
+};
+for (const [date, last] of [
+  ['27-02-2028','2028-03-04'],
+  ['27-03-2027','2027-04-02']
+]) {
+  sent.length = 0;
+  await sandbox.sendAndroidPrayerWeek({
+    params:new URLSearchParams(),endpoint:'timingsByCity',
+    firstDay:{...firstDay,date:{gregorian:{date}}},
+    timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
+  });
+  assert.equal(sent.length, 1, 'Expected valid week across calendar boundary');
+  assert.equal(sent[0].payload.days[6].date, last);
+}
 console.log('OK: ' + scripts.length + ' inline scripts parse; weekly prayer bridge runtime checks pass.');
