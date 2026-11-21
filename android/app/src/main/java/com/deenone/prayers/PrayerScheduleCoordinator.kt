@@ -44,6 +44,18 @@ object PrayerScheduleCoordinator {
                 }
             } == true
 
+    fun expectedAlarmTime(context: Context, prayer: String): Long? {
+        if (prayer !in setOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")) return null
+        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(SCHEDULE, null) ?: return null
+        val schedule = PrayerSchedulePayload.parse(stored) ?: return null
+        val zone = java.time.ZoneId.of(schedule.timezone)
+        if (schedule.date != java.time.LocalDate.now(zone)) return null
+        val time = schedule.timings[prayer]?.let(java.time.LocalTime::parse) ?: return null
+        return java.time.ZonedDateTime.of(schedule.date, time, zone)
+            .toInstant().toEpochMilli()
+    }
+
     fun setEnabled(context: Context, enabled: Boolean) {
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!preferences.edit().putBoolean(ENABLED, enabled).commit()) return
