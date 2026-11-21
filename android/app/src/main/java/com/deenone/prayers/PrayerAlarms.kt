@@ -42,10 +42,16 @@ object PrayerAlarms {
             val localTime = runCatching { LocalTime.parse(time) }.getOrNull() ?: continue
             val at = ZonedDateTime.of(date, localTime, zone).toInstant().toEpochMilli()
             if (at <= System.currentTimeMillis()) continue
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarms.canScheduleExactAlarms()) {
+            // Exact-alarm permission can be revoked between the check and scheduling.
+            // Fall back to an inexact alarm instead of crashing the application.
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarms.canScheduleExactAlarms()) {
+                    alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                } else {
+                    alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                }
+            } catch (_: SecurityException) {
                 alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
-            } else {
-                alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
             }
         }
     }
