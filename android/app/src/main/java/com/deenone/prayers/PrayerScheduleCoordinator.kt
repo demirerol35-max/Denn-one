@@ -135,8 +135,9 @@ object PrayerScheduleCoordinator {
             return false
         }
         val week = storedWeek(context)
+        val now = System.currentTimeMillis()
         if (week != null && week.days.any { day ->
-                !day.date.isBefore(java.time.LocalDate.now(java.time.ZoneId.of(day.timezone)))
+                PrayerScheduleAvailability.hasFuturePrayer(day, now)
             }) {
             PrayerAlarms.cancelAll(context)
             PrayerAlarms.scheduleWeek(context, week.days, true)
@@ -151,6 +152,10 @@ object PrayerScheduleCoordinator {
         val parsed = PrayerSchedulePayload.parse(payload) ?: return false
         val today = java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
         if (parsed.date != today) {
+            PrayerAlarms.cancelAll(context)
+            return false
+        }
+        if (!PrayerScheduleAvailability.hasFuturePrayer(parsed, now)) {
             PrayerAlarms.cancelAll(context)
             return false
         }
