@@ -339,6 +339,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // Refresh the visible channel label after an Android language change.
+        PrayerAlarms.ensureChannel(this)
         // Re-evaluate the stored local date and restore today's alarms after
         // returning from Android settings or a period in the background.
         PrayerScheduleCoordinator.restore(this)
