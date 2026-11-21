@@ -1118,6 +1118,14 @@ prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>mo
  const bridge=window.DeenOneAndroid;
  if(!panel||!status||!toggle||!bridge||typeof bridge.postMessage!=='function')return;
  panel.hidden=false;
+ // Inside the APK, browser Notification/Push APIs are not the source of
+ // prayer reminders. Hide the misleading web-only warning and diagnostics.
+ const webLimitation=document.getElementById('deen-notification-limitation');
+ const browserDiagnostic=document.getElementById('deen-notification-diagnostic-button');
+ const browserDiagnosticResult=document.getElementById('deen-notification-diagnostic-result');
+ if(webLimitation)webLimitation.hidden=true;
+ if(browserDiagnostic)browserDiagnostic.hidden=true;
+ if(browserDiagnosticResult)browserDiagnosticResult.hidden=true;
  const translations={
   fr:['Vérification des rappels Android…','Rappels Android activés','Rappels Android désactivés','Autoriser les rappels Android','Désactiver les rappels Android','Autorisation des notifications refusée dans Android','Aucun horaire de prière enregistré','Les alarmes exactes ne sont pas autorisées : les rappels peuvent arriver en retard'],
   en:['Checking Android reminders…','Android reminders enabled','Android reminders disabled','Allow Android reminders','Disable Android reminders','Android notification permission denied','No prayer schedule saved','Exact alarms are not allowed: reminders may arrive late'],
@@ -1142,6 +1150,10 @@ prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>mo
   if(data.exactAlarmsAllowed===false)status.textContent+=' · '+t[7];
   toggle.textContent=enabled?t[4]:t[3];
   toggle.disabled=false;
+  // Surface the actual Android permission state in the settings panel.
+  // Never infer native availability from WebView's unsupported Push API.
+  const nativeFeedback=document.getElementById('adhan-settings-feedback');
+  if(nativeFeedback)nativeFeedback.textContent=status.textContent;
  };
  toggle.addEventListener('click',()=>{
   toggle.disabled=true;
