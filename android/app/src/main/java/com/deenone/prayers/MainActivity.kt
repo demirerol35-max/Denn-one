@@ -59,7 +59,11 @@ class MainActivity : Activity() {
                     origin: String, callback: GeolocationPermissions.Callback
                 ) {
                     val uri = runCatching { Uri.parse(origin) }.getOrNull()
-                    if (uri?.scheme != "https" || uri.host != "demirerol35-max.github.io") {
+                    val page = runCatching { Uri.parse(this@MainActivity.webView.url ?: "") }.getOrNull()
+                    if (uri?.scheme != "https" || uri.host != "demirerol35-max.github.io" ||
+                        page?.scheme != "https" ||
+                        page.host != "demirerol35-max.github.io" ||
+                        page.path?.startsWith("/Denn-one/") != true) {
                         callback.invoke(origin, false, false)
                         return
                     }
