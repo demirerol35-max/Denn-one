@@ -30,6 +30,9 @@ object PrayerScheduleCoordinator {
         val existing = preferences.getString(SCHEDULE, null)?.let(PrayerSchedulePayload::parse)
         if (existing != null && existing.date == todayAtPrayerLocation &&
             parsed.date == todayAtPrayerLocation.plusDays(1)) return false
+        // A different location can have a different local date. A one-day
+        // schedule must never replace today's alarms with a future day's data.
+        if (parsed.date != todayAtPrayerLocation) return false
         // Save before scheduling so a later boot receiver can restore the schedule.
         if (!preferences.edit().putString(SCHEDULE, payload).commit()) return false
         PrayerAlarms.scheduleDay(
