@@ -6,6 +6,8 @@ import org.json.JSONObject
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.AlarmManager
+import android.provider.Settings
 import android.os.Build
 import android.content.pm.PackageManager
 import android.webkit.GeolocationPermissions
@@ -163,6 +165,7 @@ class MainActivity : Activity() {
                                 } else {
                                     if (PrayerAlarms.notificationsAllowed(this)) {
                                         PrayerScheduleCoordinator.setEnabled(this, true)
+                                        offerExactAlarmPermission()
                                     } else {
                                         AlertDialog.Builder(this)
                                             .setTitle("Notifications désactivées")
@@ -207,6 +210,29 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun offerExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            PrayerAlarms.exactAlarmsAllowed(this)) return
+        AlertDialog.Builder(this)
+            .setTitle("Rappels de prière à l'heure")
+            .setMessage("Android limite actuellement les alarmes exactes. Les rappels peuvent arriver en retard. Tu peux autoriser les alarmes et rappels dans les paramètres pour améliorer leur ponctualité.")
+            .setNegativeButton("Plus tard", null)
+            .setPositiveButton("Ouvrir les paramètres") { _, _ ->
+                runCatching {
+                    startActivity(
+                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                            .setData(Uri.parse("package:$packageName"))
+                    )
+                }.onFailure {
+                    AlertDialog.Builder(this)
+                        .setMessage("Ouvre les paramètres Android, puis autorise les alarmes et rappels pour Deen One.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+            }
+            .show()
+    }
+
     private fun refreshReminderStatusInWebView() {
         // The web layer listens for focus and asks the native bridge for status.
         // Never claim reminders are active before Android has handled consent.
@@ -222,6 +248,7 @@ class MainActivity : Activity() {
                 grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
                 PrayerAlarms.notificationsAllowed(this)) {
                 PrayerScheduleCoordinator.setEnabled(this, true)
+                offerExactAlarmPermission()
             }
             refreshReminderStatusInWebView()
             notificationConsentPending = false
