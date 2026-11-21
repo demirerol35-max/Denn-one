@@ -41,7 +41,7 @@ class PrayerSchedulePayloadTest {
     }
 
     @Test fun rejectsMissingPrayer() {
-        val withoutIsha = payload().replace("\"Isha\":\"18:32\"", "")
+        val withoutIsha = payload().replace(Regex(""",\\s*"Isha":"18:32" """.trim()), "")
         assertNull(PrayerSchedulePayload.parse(withoutIsha))
     }
 
