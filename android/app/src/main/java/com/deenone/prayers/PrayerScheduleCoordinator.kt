@@ -93,6 +93,20 @@ object PrayerScheduleCoordinator {
         return PrayerInstant.epochMillis(day.date, time, day.timezone)
     }
 
+    /**
+     * Mark a validated alarm as delivered before posting its notification.
+     * Replayed broadcasts for the same prayer and scheduled instant are ignored.
+     */
+    @Synchronized
+    fun claimDelivery(context: Context, prayer: String, expectedAt: Long): Boolean {
+        if (prayer !in setOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha") ||
+            expectedAt <= 0L) return false
+        val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val key = "delivered_$prayer"
+        if (preferences.getLong(key, 0L) == expectedAt) return false
+        return preferences.edit().putLong(key, expectedAt).commit()
+    }
+
     fun setEnabled(context: Context, enabled: Boolean) {
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!preferences.edit().putBoolean(ENABLED, enabled).commit()) return
