@@ -21,4 +21,17 @@ class PrayerInstantTest {
         val at = PrayerInstant.epochMillis(LocalDate.parse("2028-02-29"), "05:30", "Europe/Paris")
         assertEquals("2028-02-29T04:30:00Z", java.time.Instant.ofEpochMilli(at).toString())
     }
+    @Test fun parisSpringClockChangeUsesSummerOffsetAfterTransition() {
+        val before = PrayerInstant.epochMillis(LocalDate.parse("2027-03-28"), "01:30", "Europe/Paris")
+        val after = PrayerInstant.epochMillis(LocalDate.parse("2027-03-28"), "03:30", "Europe/Paris")
+        assertEquals("2027-03-28T00:30:00Z", java.time.Instant.ofEpochMilli(before).toString())
+        assertEquals("2027-03-28T01:30:00Z", java.time.Instant.ofEpochMilli(after).toString())
+    }
+
+    @Test fun parisAutumnClockChangeUsesWinterOffsetAfterTransition() {
+        val before = PrayerInstant.epochMillis(LocalDate.parse("2027-10-31"), "01:30", "Europe/Paris")
+        val after = PrayerInstant.epochMillis(LocalDate.parse("2027-10-31"), "03:30", "Europe/Paris")
+        assertEquals("2027-10-30T23:30:00Z", java.time.Instant.ofEpochMilli(before).toString())
+        assertEquals("2027-10-31T02:30:00Z", java.time.Instant.ofEpochMilli(after).toString())
+    }
 }
