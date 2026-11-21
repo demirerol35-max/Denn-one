@@ -128,4 +128,23 @@ for (const [date, last] of [
   assert.equal(sent.length, 1, 'Expected valid week across calendar boundary');
   assert.equal(sent[0].payload.days[6].date, last);
 }
+
+// Reject calendar dates that JavaScript Date would otherwise silently normalize.
+for (const impossible of ['31-02-2028','29-02-2027']) {
+  sent.length = 0;
+  await sandbox.sendAndroidPrayerWeek({
+    params:new URLSearchParams(),endpoint:'timingsByCity',
+    firstDay:{...firstDay,date:{gregorian:{date:impossible}}},
+    timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
+  });
+  assert.equal(sent.length, 0, 'Impossible Gregorian date must be rejected');
+}
+// A malformed suffix must not be silently truncated into a valid prayer time.
+sent.length = 0;
+await sandbox.sendAndroidPrayerWeek({
+  params:new URLSearchParams(),endpoint:'timingsByCity',
+  firstDay:{...firstDay,timings:{...firstDay.timings,Fajr:'05:30INVALID'}},
+  timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
+});
+assert.equal(sent.length, 0, 'Malformed time suffix must be rejected');
 console.log('OK: ' + scripts.length + ' inline scripts parse; weekly prayer bridge runtime checks pass.');
