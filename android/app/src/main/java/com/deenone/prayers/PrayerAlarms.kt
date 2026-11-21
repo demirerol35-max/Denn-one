@@ -84,6 +84,50 @@ object PrayerAlarms {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
             context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
 
+    private fun weekRequestCode(date: LocalDate, index: Int): Int =
+        Math.toIntExact(date.toEpochDay() * 10L + index + 100_000L)
+
+    private fun weekPending(
+        context: Context, date: LocalDate, index: Int, prayer: String, at: Long
+    ): PendingIntent = PendingIntent.getBroadcast(
+        context, weekRequestCode(date, index),
+        Intent(context, PrayerAlarmReceiver::class.java)
+            .putExtra("prayer", prayer)
+            .putExtra("expectedAt", at)
+            .putExtra("weekDate", date.toString()),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    fun cancelWeek(context: Context, days: List<LocalDate>) {
+        val manager = context.getSystemService(AlarmManager::class.java)
+        for (date in days) prayers.forEachIndexed { index, prayer ->
+            manager.cancel(weekPending(context, date, index, prayer, 0L))
+        }
+    }
+
+    fun scheduleWeek(context: Context, days: List<PrayerSchedulePayload.Schedule>, enabled: Boolean) {
+        val manager = context.getSystemService(AlarmManager::class.java)
+        for (day in days) {
+            val zone = ZoneId.of(day.timezone)
+            prayers.forEachIndexed { index, prayer ->
+                val time = LocalTime.parse(day.timings.getValue(prayer))
+                val at = ZonedDateTime.of(day.date, time, zone).toInstant().toEpochMilli()
+                val pending = weekPending(context, day.date, index, prayer, at)
+                manager.cancel(pending)
+                if (!enabled || at <= System.currentTimeMillis()) return@forEachIndexed
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !manager.canScheduleExactAlarms()) {
+                        manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                    } else {
+                        manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                    }
+                } catch (_: SecurityException) {
+                    manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                }
+            }
+        }
+    }
+
     fun notificationsAllowed(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
