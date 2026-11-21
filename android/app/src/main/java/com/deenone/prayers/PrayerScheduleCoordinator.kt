@@ -28,7 +28,7 @@ object PrayerScheduleCoordinator {
         // Only today's schedule is supported until multi-day alarms are implemented.
         // Save before scheduling so a later boot receiver can restore the schedule.
         if (!preferences.edit().putString(SCHEDULE, payload).commit()) return false
-        PrayerAlarms.scheduleDay(
+        if (storedWeek(context) == null) PrayerAlarms.scheduleDay(
             context, parsed.date, parsed.timezone, parsed.timings, enabled
         )
         return true
@@ -53,6 +53,9 @@ object PrayerScheduleCoordinator {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(ENABLED, false)
 
     fun hasSchedule(context: Context): Boolean =
+        storedWeek(context)?.days?.any { day ->
+            !day.date.isBefore(java.time.LocalDate.now(java.time.ZoneId.of(day.timezone)))
+        } == true ||
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(SCHEDULE, null)?.let { stored ->
                 PrayerSchedulePayload.parse(stored)?.let { parsed ->
