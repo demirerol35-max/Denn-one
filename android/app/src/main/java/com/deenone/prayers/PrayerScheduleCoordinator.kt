@@ -148,8 +148,18 @@ object PrayerScheduleCoordinator {
         storedWeek(context, allowExpired = true)?.let { expired ->
             PrayerAlarms.cancelWeek(context, expired.days.map { day -> day.date })
         }
-        val payload = preferences.getString(SCHEDULE, null) ?: return false
-        val parsed = PrayerSchedulePayload.parse(payload) ?: return false
+        val payload = preferences.getString(SCHEDULE, null)
+        if (payload == null) {
+            // A previously registered daily PendingIntent can outlive its
+            // saved schedule after a partial state change.
+            PrayerAlarms.cancelAll(context)
+            return false
+        }
+        val parsed = PrayerSchedulePayload.parse(payload)
+        if (parsed == null) {
+            PrayerAlarms.cancelAll(context)
+            return false
+        }
         val today = java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
         if (parsed.date != today) {
             PrayerAlarms.cancelAll(context)
