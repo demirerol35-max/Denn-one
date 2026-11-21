@@ -221,6 +221,14 @@ class MainActivity : Activity() {
         pendingLocation = null
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Re-evaluate the stored local date and restore today's alarms after
+        // returning from Android settings or a period in the background.
+        PrayerScheduleCoordinator.restore(this)
+        if (::webView.isInitialized) refreshReminderStatusInWebView()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         webView.saveState(outState)
         super.onSaveInstanceState(outState)
