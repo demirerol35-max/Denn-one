@@ -21,18 +21,10 @@ object PrayerScheduleCoordinator {
         val parsed = PrayerSchedulePayload.parse(payload) ?: return false
         // Never replace a valid future schedule with an expired one.
         val todayAtPrayerLocation = java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
-        if (parsed.date.isBefore(todayAtPrayerLocation) ||
-            parsed.date.isAfter(todayAtPrayerLocation.plusDays(1))) return false
+        if (parsed.date != todayAtPrayerLocation) return false
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val enabled = preferences.getBoolean(ENABLED, false)
-        // Do not discard today's remaining alarms when tomorrow's schedule arrives early.
-        // The single-day scheduler will be replaced by a multi-day scheduler later.
-        val existing = preferences.getString(SCHEDULE, null)?.let(PrayerSchedulePayload::parse)
-        if (existing != null && existing.date == todayAtPrayerLocation &&
-            parsed.date == todayAtPrayerLocation.plusDays(1)) return false
-        // A different location can have a different local date. A one-day
-        // schedule must never replace today's alarms with a future day's data.
-        if (parsed.date != todayAtPrayerLocation) return false
+        // Only today's schedule is supported until multi-day alarms are implemented.
         // Save before scheduling so a later boot receiver can restore the schedule.
         if (!preferences.edit().putString(SCHEDULE, payload).commit()) return false
         PrayerAlarms.scheduleDay(
