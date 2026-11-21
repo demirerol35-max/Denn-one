@@ -40,7 +40,7 @@ object PrayerScheduleCoordinator {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(SCHEDULE, null)?.let { stored ->
                 PrayerSchedulePayload.parse(stored)?.let { parsed ->
-                    !parsed.date.isBefore(java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone)))
+                    parsed.date == java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
                 }
             } == true
 
@@ -79,7 +79,7 @@ object PrayerScheduleCoordinator {
         val payload = preferences.getString(SCHEDULE, null) ?: return false
         val parsed = PrayerSchedulePayload.parse(payload) ?: return false
         val today = java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
-        if (parsed.date.isBefore(today)) {
+        if (parsed.date != today) {
             PrayerAlarms.cancelAll(context)
             return false
         }
