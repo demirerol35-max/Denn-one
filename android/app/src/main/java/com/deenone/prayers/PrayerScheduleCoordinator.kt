@@ -12,6 +12,7 @@ object PrayerScheduleCoordinator {
     private const val PREFS = "deen_native_prayers"
     private const val SCHEDULE = "schedule"
     private const val ENABLED = "enabled"
+    private const val WEEK = "week"
 
     /**
      * Accepts a validated daily schedule and replaces the previous day's alarms.
@@ -30,6 +31,21 @@ object PrayerScheduleCoordinator {
         PrayerAlarms.scheduleDay(
             context, parsed.date, parsed.timezone, parsed.timings, enabled
         )
+        return true
+    }
+
+    private fun storedWeek(context: Context): PrayerWeekPayload.Week? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(WEEK, null)?.let(PrayerWeekPayload::parse)
+
+    fun updateWeek(context: Context, payload: String): Boolean {
+        val week = PrayerWeekPayload.parse(payload) ?: return false
+        val old = storedWeek(context)
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!prefs.edit().putString(WEEK, payload).commit()) return false
+        old?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
+        PrayerAlarms.cancelAll(context)
+        PrayerAlarms.scheduleWeek(context, week.days, isEnabled(context))
         return true
     }
 
