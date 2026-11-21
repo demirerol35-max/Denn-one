@@ -574,7 +574,7 @@ document.querySelectorAll('[data-tab="prayer"],[data-go="prayer"]').forEach(b=>b
 window.addEventListener('hashchange',()=>setTimeout(autoLoad,0));
 window.addEventListener('deen-prayer-mode-changed',()=>{lastAutoDay='';prayerRetryAfter=0;pendingPrayerRefresh=true;setTimeout(autoLoad,0)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(autoLoad,0)});
-window.addEventListener('online',()=>setTimeout(autoLoad,0));
+window.addEventListener('online',()=>{prayerRetryAfter=0;lastAutoDay='';pendingPrayerRefresh=true;setTimeout(autoLoad,0)});
 city.addEventListener('change',prayerSettingsChanged);
 country.addEventListener('change',prayerSettingsChanged);
 let cityRefreshTimer=0;
