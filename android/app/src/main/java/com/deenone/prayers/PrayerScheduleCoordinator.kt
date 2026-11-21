@@ -25,6 +25,11 @@ object PrayerScheduleCoordinator {
             parsed.date.isAfter(todayAtPrayerLocation.plusDays(1))) return false
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val enabled = preferences.getBoolean(ENABLED, false)
+        // Do not discard today's remaining alarms when tomorrow's schedule arrives early.
+        // The single-day scheduler will be replaced by a multi-day scheduler later.
+        val existing = preferences.getString(SCHEDULE, null)?.let(PrayerSchedulePayload::parse)
+        if (existing != null && existing.date == todayAtPrayerLocation &&
+            parsed.date == todayAtPrayerLocation.plusDays(1)) return false
         // Save before scheduling so a later boot receiver can restore the schedule.
         if (!preferences.edit().putString(SCHEDULE, payload).commit()) return false
         PrayerAlarms.scheduleDay(
