@@ -175,6 +175,8 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         // A clock adjustment or an early delivery must never announce a prayer
         // before its scheduled instant, even by a millisecond.
         if (!PrayerAlarmTiming.isDue(expectedAt, System.currentTimeMillis())) return
+        if (!PrayerAlarms.notificationsAllowed(context)) return
+        if (!PrayerScheduleCoordinator.claimDelivery(context, prayer, expectedAt)) return
         PrayerAlarms.notifyPrayer(context, prayer)
     }
 }
