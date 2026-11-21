@@ -59,11 +59,8 @@ class MainActivity : Activity() {
                     origin: String, callback: GeolocationPermissions.Callback
                 ) {
                     val uri = runCatching { Uri.parse(origin) }.getOrNull()
-                    val page = runCatching { Uri.parse(this@MainActivity.webView.url ?: "") }.getOrNull()
                     if (uri?.scheme != "https" || uri.host != "demirerol35-max.github.io" ||
-                        page?.scheme != "https" ||
-                        page.host != "demirerol35-max.github.io" ||
-                        page.path?.startsWith("/Denn-one/") != true) {
+                        !isTrustedPrayerPage()) {
                         callback.invoke(origin, false, false)
                         return
                     }
@@ -148,11 +145,7 @@ class MainActivity : Activity() {
                 ) return@addWebMessageListener
                 // GitHub Pages shares an origin across repositories. Only the
                 // Deen One repository path may control native prayer alarms.
-                val currentPage = runCatching { Uri.parse(webView.url ?: "") }.getOrNull()
-                if (currentPage?.scheme != "https" ||
-                    currentPage.host != "demirerol35-max.github.io" ||
-                    currentPage.path?.startsWith("/Denn-one/") != true
-                ) return@addWebMessageListener
+                if (!isTrustedPrayerPage()) return@addWebMessageListener
                 val request = runCatching { JSONObject(message.data ?: "") }.getOrNull()
                 val type = request?.optString("type")
                 val success = when (type) {
@@ -223,6 +216,13 @@ class MainActivity : Activity() {
         } else {
             webView.restoreState(savedInstanceState)
         }
+    }
+
+    private fun isTrustedPrayerPage(): Boolean {
+        val page = runCatching { Uri.parse(webView.url ?: "") }.getOrNull()
+        return page?.scheme == "https" &&
+            page.host == "demirerol35-max.github.io" &&
+            page.path?.startsWith("/Denn-one/") == true
     }
 
     private fun showNotificationSettingsDialog() {
@@ -306,7 +306,14 @@ class MainActivity : Activity() {
         }
         if (requestCode != locationRequestCode) return
         pendingLocation?.let { (origin, callback) ->
-            callback.invoke(origin, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED, false)
+            // The user may have navigated away while Android displayed the
+            // permission prompt. Never grant location to a different page.
+            callback.invoke(
+                origin,
+                grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
+                    isTrustedPrayerPage(),
+                false
+            )
         }
         pendingLocation = null
     }
