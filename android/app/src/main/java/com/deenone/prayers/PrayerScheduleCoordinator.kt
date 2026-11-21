@@ -56,6 +56,11 @@ object PrayerScheduleCoordinator {
         }
         val payload = preferences.getString(SCHEDULE, null) ?: return false
         val parsed = PrayerSchedulePayload.parse(payload) ?: return false
+        val today = java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
+        if (parsed.date.isBefore(today)) {
+            PrayerAlarms.cancelAll(context)
+            return false
+        }
         PrayerAlarms.scheduleDay(
             context, parsed.date, parsed.timezone, parsed.timings, true
         )
