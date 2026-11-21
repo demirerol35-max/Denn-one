@@ -152,6 +152,7 @@ class MainActivity : Activity() {
                                     requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationRequestCode)
                                 } else {
                                     PrayerScheduleCoordinator.setEnabled(this, true)
+                                    refreshReminderStatusInWebView()
                                 }
                             }
                             .show()
@@ -185,6 +186,12 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun refreshReminderStatusInWebView() {
+        // The web layer listens for focus and asks the native bridge for status.
+        // Never claim reminders are active before Android has handled consent.
+        webView.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
@@ -194,6 +201,7 @@ class MainActivity : Activity() {
                 grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
                 PrayerScheduleCoordinator.setEnabled(this, true)
             }
+            refreshReminderStatusInWebView()
             notificationConsentPending = false
             return
         }
