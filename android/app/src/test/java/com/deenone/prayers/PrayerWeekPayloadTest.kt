@@ -78,6 +78,25 @@ class PrayerWeekPayloadTest {
         assertFalse(PrayerWeekPayload.matchesDay(week, changed))
     }
 
+    @Test fun rejectsNonConsecutiveDatesAcrossMonthBoundary() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val endOfMonth = today.withDayOfMonth(today.lengthOfMonth())
+        // A stored batch can be inspected independently of the current date.
+        val invalid = batch(day(endOfMonth), day(endOfMonth.plusDays(2)))
+        assertNull(PrayerWeekPayload.parse(
+            invalid, requireToday = false, allowExpired = true
+        ))
+    }
+
+    @Test fun acceptsConsecutiveDatesAcrossMonthBoundary() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val endOfMonth = today.withDayOfMonth(today.lengthOfMonth())
+        val valid = batch(day(endOfMonth), day(endOfMonth.plusDays(1)))
+        assertNotNull(PrayerWeekPayload.parse(
+            valid, requireToday = false, allowExpired = true
+        ))
+    }
+
     @Test fun rejectsMalformedPrayerTimes() {
         val today = LocalDate.now(java.time.ZoneId.of(zone))
         assertNull(PrayerWeekPayload.parse(batch(day(today).replace("05:30", "25:30"))))
