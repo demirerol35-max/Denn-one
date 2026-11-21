@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="prayer_notification_title">Namaz vakti: %1$s</string>
+    <string name="prayer_notification_body">%1$s namazı vakti geldi</string>
+    <string name="prayer_fajr">İmsak (Sabah)</string>
+    <string name="prayer_dhuhr">Öğle</string>
+    <string name="prayer_asr">İkindi</string>
+    <string name="prayer_maghrib">Akşam</string>
+    <string name="prayer_isha">Yatsı</string>
+</resources>
