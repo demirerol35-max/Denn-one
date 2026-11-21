@@ -18,7 +18,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 
 /**
- * Android-native prayer alarm foundation. Not wired into the web app yet.
+ * Android-native prayer alarm foundation connected to the trusted WebView bridge.
  * Pass validated API prayer times and the API timezone; do not use device timezone.
  */
 object PrayerAlarms {
@@ -104,6 +104,10 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val prayer = intent.getStringExtra("prayer") ?: return
         if (prayer !in listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")) return
+        // A pending broadcast may arrive after reminders have been disabled or
+        // after its stored schedule has expired. Never notify in those cases.
+        if (!PrayerScheduleCoordinator.isEnabled(context) ||
+            !PrayerScheduleCoordinator.hasSchedule(context)) return
         PrayerAlarms.notifyPrayer(context, prayer)
     }
 }
