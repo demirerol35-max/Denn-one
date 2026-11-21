@@ -552,7 +552,7 @@ async function autoLoad(){
  if(currentPrayerMode()==='manual')activeGpsCoords=null;
  if(currentPrayerMode()==='auto'&&!activeGpsCoords){
   if(!navigator.geolocation||!window.isSecureContext){status.textContent=modeWords()[3];return;}
-  navigator.geolocation.getCurrentPosition(p=>{if(currentPrayerMode()!=='auto')return;activeGpsCoords={latitude:p.coords.latitude,longitude:p.coords.longitude};lastAutoDay='';autoLoad()},()=>{status.textContent=modeWords()[3]},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});return;
+  navigator.geolocation.getCurrentPosition(p=>{if(currentPrayerMode()!=='auto')return;const {latitude,longitude,accuracy}=p.coords;if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180||!Number.isFinite(accuracy)||accuracy>10000){status.textContent=modeWords()[3];return;}activeGpsCoords={latitude,longitude};lastAutoDay='';autoLoad()},()=>{status.textContent=modeWords()[3]},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});return;
  }
  if(loadingAuto){return}
  const today=prayerLocalDay();
