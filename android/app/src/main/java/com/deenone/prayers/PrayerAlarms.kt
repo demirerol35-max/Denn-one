@@ -42,11 +42,14 @@ object PrayerAlarms {
             val localTime = runCatching { LocalTime.parse(time) }.getOrNull() ?: continue
             val at = ZonedDateTime.of(date, localTime, zone).toInstant().toEpochMilli()
             if (at <= System.currentTimeMillis()) continue
+            // PendingIntent identity ignores extras. Update the stored expected
+            // timestamp so a late broadcast from an older location is rejected.
+            val scheduledPending = pending(context, index, prayer, at)
             // Exact-alarm permission can be revoked between the check and scheduling.
             // Fall back to an inexact alarm instead of crashing the application.
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarms.canScheduleExactAlarms()) {
-                    alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                    alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, scheduledPending)
                 } else {
                     alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
                 }
@@ -56,10 +59,12 @@ object PrayerAlarms {
         }
     }
 
-    private fun pending(context: Context, index: Int, prayer: String): PendingIntent =
+    private fun pending(context: Context, index: Int, prayer: String, expectedAt: Long = 0L): PendingIntent =
         PendingIntent.getBroadcast(
             context, index,
-            Intent(context, PrayerAlarmReceiver::class.java).putExtra("prayer", prayer),
+            Intent(context, PrayerAlarmReceiver::class.java)
+                .putExtra("prayer", prayer)
+                .putExtra("expectedAt", expectedAt),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -108,6 +113,10 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         // after its stored schedule has expired. Never notify in those cases.
         if (!PrayerScheduleCoordinator.isEnabled(context) ||
             !PrayerScheduleCoordinator.hasSchedule(context)) return
+        val expectedAt = intent.getLongExtra("expectedAt", 0L)
+        if (expectedAt <= 0L) return
+        val currentExpectedAt = PrayerScheduleCoordinator.expectedAlarmTime(context, prayer)
+        if (currentExpectedAt != expectedAt) return
         PrayerAlarms.notifyPrayer(context, prayer)
     }
 }
