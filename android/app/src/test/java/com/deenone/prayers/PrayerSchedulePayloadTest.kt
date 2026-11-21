@@ -41,7 +41,7 @@ class PrayerSchedulePayloadTest {
     }
 
     @Test fun rejectsMissingPrayer() {
-        val withoutIsha = payload().replace(Regex(""",\s*"Isha":"18:32" """.trim()), "")
+        val withoutIsha = org.json.JSONObject(payload()).apply { getJSONObject("timings").remove("Isha") }.toString()
         assertNull(PrayerSchedulePayload.parse(withoutIsha))
     }
 
