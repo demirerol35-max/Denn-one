@@ -17,6 +17,18 @@ class PrayerInstantTest {
         assertEquals("2027-01-15T09:00:00Z", java.time.Instant.ofEpochMilli(at).toString())
     }
 
+    @Test fun sameLocalTimeInDifferentCitiesProducesDifferentInstants() {
+        val date = LocalDate.parse("2027-01-15")
+        val paris = PrayerInstant.epochMillis(date, "06:30", "Europe/Paris")
+        val istanbul = PrayerInstant.epochMillis(date, "06:30", "Europe/Istanbul")
+        assertEquals(2L * 60L * 60L * 1000L, paris - istanbul)
+    }
+
+    @Test fun midnightUsesPrayerLocationDate() {
+        val at = PrayerInstant.epochMillis(LocalDate.parse("2027-01-15"), "00:00", "Europe/Istanbul")
+        assertEquals("2027-01-14T21:00:00Z", java.time.Instant.ofEpochMilli(at).toString())
+    }
+
     @Test fun leapDayIsSupported() {
         val at = PrayerInstant.epochMillis(LocalDate.parse("2028-02-29"), "05:30", "Europe/Paris")
         assertEquals("2028-02-29T04:30:00Z", java.time.Instant.ofEpochMilli(at).toString())
