@@ -60,7 +60,7 @@ class MainActivity : Activity() {
                 ) {
                     val uri = runCatching { Uri.parse(origin) }.getOrNull()
                     if (uri?.scheme != "https" || uri.host != "demirerol35-max.github.io" ||
-                        !isTrustedPrayerPage()) {
+                        uri.port != -1 || uri.userInfo != null || !isTrustedPrayerPage()) {
                         callback.invoke(origin, false, false)
                         return
                     }
