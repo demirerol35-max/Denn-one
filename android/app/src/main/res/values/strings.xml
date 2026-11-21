@@ -8,4 +8,5 @@
     <string name="prayer_maghrib">Maghrib</string>
     <string name="prayer_isha">Icha</string>
     <string name="prayer_channel_name">Rappels de prière</string>
+    <string name="prayer_channel_description">Notifications des cinq prières quotidiennes</string>
 </resources>
