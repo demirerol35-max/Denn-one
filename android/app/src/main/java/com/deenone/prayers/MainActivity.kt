@@ -140,6 +140,10 @@ class MainActivity : Activity() {
                         val payload = request.optJSONObject("payload")?.toString()
                         payload != null && PrayerScheduleCoordinator.update(this, payload)
                     }
+                    "scheduleWeek" -> {
+                        val payload = request.optJSONObject("payload")?.toString()
+                        payload != null && PrayerScheduleCoordinator.updateWeek(this, payload)
+                    }
                     "enable" -> {
                         // Ignore duplicate taps while the consent dialog is visible.
                         if (!reminderDialogOpen) {
