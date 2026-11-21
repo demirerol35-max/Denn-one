@@ -53,6 +53,17 @@ class PrayerWeekPayloadTest {
         assertNull(PrayerWeekPayload.parse(payload, requireToday = false))
     }
 
+    @Test fun permitsExpiredBatchOnlyForAlarmCleanup() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val expired = batch(day(today.minusDays(3)), day(today.minusDays(2)))
+        assertNull(PrayerWeekPayload.parse(expired, requireToday = false))
+        val cleanup = PrayerWeekPayload.parse(
+            expired, requireToday = false, allowExpired = true
+        )
+        assertNotNull(cleanup)
+        assertEquals(2, cleanup!!.days.size)
+    }
+
     @Test fun matchesSecondDayWithoutDiscardingFutureAlarms() {
         val today = LocalDate.now(java.time.ZoneId.of(zone))
         val week = PrayerWeekPayload.parse(batch(day(today), day(today.plusDays(1))))
