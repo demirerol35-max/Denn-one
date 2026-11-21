@@ -34,6 +34,13 @@ object PrayerScheduleCoordinator {
         return true
     }
 
+    fun isEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(ENABLED, false)
+
+    fun hasSchedule(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(SCHEDULE, null)?.let { PrayerSchedulePayload.parse(it) != null } == true
+
     fun setEnabled(context: Context, enabled: Boolean) {
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!preferences.edit().putBoolean(ENABLED, enabled).commit()) return
