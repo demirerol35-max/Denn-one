@@ -227,9 +227,32 @@ class MainActivity : Activity() {
 
         if (savedInstanceState == null) {
             webView.loadUrl("https://demirerol35-max.github.io/Denn-one/vision.html")
+            // The native permission must not depend on browser Notification API
+            // support or on the user discovering the reminders panel.
+            webView.post { offerFirstRunNotificationConsent() }
         } else {
             webView.restoreState(savedInstanceState)
         }
+    }
+
+    private fun offerFirstRunNotificationConsent() {
+        if (Build.VERSION.SDK_INT < 33 ||
+            PrayerAlarms.notificationsAllowed(this)) return
+        val prefs = getSharedPreferences("deen_native_prayers", MODE_PRIVATE)
+        if (prefs.getBoolean("notification_onboarding_shown", false)) return
+        prefs.edit().putBoolean("notification_onboarding_shown", true).apply()
+        AlertDialog.Builder(this)
+            .setTitle("Notifications des cinq prières")
+            .setMessage("Veux-tu recevoir les rappels des cinq prières, même lorsque Deen One est fermée ? Android va te demander l'autorisation des notifications.")
+            .setNegativeButton("Plus tard", null)
+            .setPositiveButton("Autoriser") { _, _ ->
+                notificationConsentPending = true
+                requestPermissions(
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    notificationRequestCode
+                )
+            }
+            .show()
     }
 
     private fun hasLocationPermission(): Boolean =
