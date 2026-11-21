@@ -81,8 +81,14 @@ self.addEventListener('push', event => {
       data: { kind: 'prayer' }
     };
     // Duplicate push deliveries should not vibrate or alert twice.
-    const existing = await self.registration.getNotifications({ tag: options.tag });
-    if (existing.length) return;
+    // A transient failure while checking existing notifications must not
+    // silently prevent a time-sensitive prayer reminder from appearing.
+    try {
+      const existing = await self.registration.getNotifications({ tag: options.tag });
+      if (existing.length) return;
+    } catch (error) {
+      console.warn('Deen One: notification deduplication unavailable', error);
+    }
     await self.registration.showNotification(title, options);
   })());
 });
