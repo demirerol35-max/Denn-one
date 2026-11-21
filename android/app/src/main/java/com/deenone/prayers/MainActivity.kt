@@ -163,10 +163,19 @@ class MainActivity : Activity() {
                         PrayerScheduleCoordinator.setEnabled(this, false)
                         true
                     }
+                    "status" -> true
                     else -> false
                 }
-                replyProxy.postMessage(JSONObject().put("type", type ?: "")
-                    .put("ok", success).toString())
+                replyProxy.postMessage(
+                    JSONObject().put("type", type ?: "")
+                        .put("ok", success)
+                        .put("enabled", PrayerScheduleCoordinator.isEnabled(this))
+                        .put("hasSchedule", PrayerScheduleCoordinator.hasSchedule(this))
+                        .put("notificationPermissionGranted",
+                            Build.VERSION.SDK_INT < 33 ||
+                                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+                        .toString()
+                )
             }
         }
 
