@@ -56,7 +56,10 @@ class MainActivity : Activity() {
                         (uri.path == "/Denn-one" || uri.path?.startsWith("/Denn-one/") == true)
                     if (internal) return false
                     if (request.isForMainFrame) {
-                        runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                        // Only hand known safe web links to external apps.
+                        if (uri.scheme == "https" || uri.scheme == "http") {
+                            runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                        }
                     }
                     return true
                 }
