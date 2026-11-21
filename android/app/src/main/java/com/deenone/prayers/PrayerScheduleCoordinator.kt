@@ -124,6 +124,9 @@ object PrayerScheduleCoordinator {
             PrayerAlarms.scheduleWeek(context, week.days, true)
             return true
         }
+        // An expired weekly batch must not leave alarms pending from earlier
+        // dates, even if the device clock or timezone was changed.
+        week?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
         val payload = preferences.getString(SCHEDULE, null) ?: return false
         val parsed = PrayerSchedulePayload.parse(payload) ?: return false
         val today = java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
