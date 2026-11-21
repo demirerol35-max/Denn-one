@@ -6,7 +6,6 @@ import org.json.JSONObject
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
-import android.app.AlarmManager
 import android.provider.Settings
 import android.os.Build
 import android.content.pm.PackageManager
@@ -28,7 +27,7 @@ import android.widget.TextView
 
 /**
  * Development WebView shell for the existing Deen One site.
- * No JavaScript interface is exposed: native prayer alarms are not yet connected.
+ * The origin-restricted WebView message bridge schedules native prayer alarms.
  */
 class MainActivity : Activity() {
     private lateinit var webView: WebView
@@ -150,8 +149,11 @@ class MainActivity : Activity() {
                         payload != null && PrayerScheduleCoordinator.updateWeek(this, payload)
                     }
                     "enable" -> {
-                        // Ignore duplicate taps while the consent dialog is visible.
-                        if (!reminderDialogOpen) {
+                        // Do not repeatedly request consent when reminders are already active.
+                        if (PrayerScheduleCoordinator.isEnabled(this) &&
+                            PrayerAlarms.notificationsAllowed(this)) {
+                            refreshReminderStatusInWebView()
+                        } else if (!reminderDialogOpen) {
                             reminderDialogOpen = true
                             AlertDialog.Builder(this)
                             .setTitle("Rappels des cinq prières")
@@ -185,6 +187,7 @@ class MainActivity : Activity() {
                     }
                     "disable" -> {
                         PrayerScheduleCoordinator.setEnabled(this, false)
+                        refreshReminderStatusInWebView()
                         true
                     }
                     "status" -> true
