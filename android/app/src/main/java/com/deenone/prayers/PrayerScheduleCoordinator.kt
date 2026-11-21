@@ -111,6 +111,9 @@ object PrayerScheduleCoordinator {
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!preferences.getBoolean(ENABLED, false)) {
             PrayerAlarms.cancelAll(context)
+            storedWeek(context)?.let { week ->
+                PrayerAlarms.cancelWeek(context, week.days.map { it.date })
+            }
             return false
         }
         val week = storedWeek(context)
