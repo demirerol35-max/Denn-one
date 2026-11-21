@@ -163,8 +163,10 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         if (prayer !in listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")) return
         // A pending broadcast may arrive after reminders have been disabled or
         // after its stored schedule has expired. Never notify in those cases.
-        if (!PrayerScheduleCoordinator.isEnabled(context) ||
-            !PrayerScheduleCoordinator.hasSchedule(context)) return
+        // Do not use hasSchedule here: at the instant of the final prayer
+        // there may be no *future* prayers left, but Isha must still fire.
+        // The exact stored timestamp below validates this broadcast instead.
+        if (!PrayerScheduleCoordinator.isEnabled(context)) return
         val expectedAt = intent.getLongExtra("expectedAt", 0L)
         if (expectedAt <= 0L) return
         val weekDate = intent.getStringExtra("weekDate")
