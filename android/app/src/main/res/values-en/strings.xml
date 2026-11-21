@@ -7,4 +7,5 @@
     <string name="prayer_asr">Asr</string>
     <string name="prayer_maghrib">Maghrib</string>
     <string name="prayer_isha">Isha</string>
+    <string name="prayer_channel_name">Prayer reminders</string>
 </resources>
