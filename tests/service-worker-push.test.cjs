@@ -29,10 +29,10 @@ function setup(now = Date.now(), lookupFails = false) {
     Date: class extends Date { static now() { return now; } }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8'), context);
-  async function push(payload) {
+  async function push(payload, malformed = false) {
     let pending;
     handlers.push({
-      data: { json: () => payload },
+      data: { json: () => { if (malformed) throw new SyntaxError('invalid JSON'); return payload; } },
       waitUntil: promise => { pending = promise; }
     });
     await pending;
@@ -141,4 +141,17 @@ test('ordinary notification opens home without trusting payload URLs', async () 
   const app = setup();
   await app.click({ tag: 'other', data: { url: 'https://malicious.example/' } });
   assert.equal(app.opened[0], 'https://example.org/app/vision.html#home');
+});
+
+test('malformed push JSON is ignored without displaying an alert', async () => {
+  const now = Date.now();
+  const app = setup(now);
+  await app.push(null, true);
+  assert.equal(app.shown.length, 0);
+});
+
+test('missing scheduled time does not produce a prayer alert', async () => {
+  const app = setup();
+  await app.push({ type: 'prayer', prayer: 'Fajr', lang: 'fr' });
+  assert.equal(app.shown.length, 0);
 });
