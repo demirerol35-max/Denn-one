@@ -27,8 +27,10 @@ object PrayerScheduleCoordinator {
         val enabled = preferences.getBoolean(ENABLED, false)
         // Only today's schedule is supported until multi-day alarms are implemented.
         // Save before scheduling so a later boot receiver can restore the schedule.
-        if (!preferences.edit().putString(SCHEDULE, payload).commit()) return false
-        if (storedWeek(context) == null) PrayerAlarms.scheduleDay(
+        val previousWeek = storedWeek(context)
+        if (!preferences.edit().putString(SCHEDULE, payload).remove(WEEK).commit()) return false
+        previousWeek?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
+        PrayerAlarms.scheduleDay(
             context, parsed.date, parsed.timezone, parsed.timings, enabled
         )
         return true
