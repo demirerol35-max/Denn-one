@@ -142,6 +142,13 @@ class MainActivity : Activity() {
                     sourceOrigin.host != "demirerol35-max.github.io" ||
                     sourceOrigin.port != -1
                 ) return@addWebMessageListener
+                // GitHub Pages shares an origin across repositories. Only the
+                // Deen One repository path may control native prayer alarms.
+                val currentPage = runCatching { Uri.parse(webView.url ?: "") }.getOrNull()
+                if (currentPage?.scheme != "https" ||
+                    currentPage.host != "demirerol35-max.github.io" ||
+                    currentPage.path?.startsWith("/Denn-one/") != true
+                ) return@addWebMessageListener
                 val request = runCatching { JSONObject(message.data ?: "") }.getOrNull()
                 val type = request?.optString("type")
                 val success = when (type) {
