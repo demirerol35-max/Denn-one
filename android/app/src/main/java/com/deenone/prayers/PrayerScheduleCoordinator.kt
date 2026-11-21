@@ -64,16 +64,21 @@ object PrayerScheduleCoordinator {
     fun isEnabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(ENABLED, false)
 
-    fun hasSchedule(context: Context): Boolean =
-        storedWeek(context)?.days?.any { day ->
-            !day.date.isBefore(java.time.LocalDate.now(java.time.ZoneId.of(day.timezone)))
-        } == true ||
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    fun hasSchedule(context: Context): Boolean {
+        val now = System.currentTimeMillis()
+        fun hasFuturePrayer(day: PrayerSchedulePayload.Schedule): Boolean =
+            day.timings.values.any { time ->
+                PrayerInstant.epochMillis(day.date, time, day.timezone) > now
+            }
+        if (storedWeek(context)?.days?.any(::hasFuturePrayer) == true) return true
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(SCHEDULE, null)?.let { stored ->
                 PrayerSchedulePayload.parse(stored)?.let { parsed ->
-                    parsed.date == java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
+                    parsed.date == java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone)) &&
+                        hasFuturePrayer(parsed)
                 }
             } == true
+    }
 
     fun expectedAlarmTime(context: Context, prayer: String): Long? {
         if (prayer !in setOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")) return null
