@@ -226,10 +226,17 @@ class MainActivity : Activity() {
                             .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                     )
                 }.onFailure {
-                    startActivity(
-                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                            .setData(Uri.parse("package:$packageName"))
-                    )
+                    runCatching {
+                        startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                .setData(Uri.parse("package:$packageName"))
+                        )
+                    }.onFailure {
+                        AlertDialog.Builder(this)
+                            .setMessage("Ouvre les paramètres Android, puis Applications, Deen One et Notifications.")
+                            .setPositiveButton("OK", null)
+                            .show()
+                    }
                 }
             }
             .show()
