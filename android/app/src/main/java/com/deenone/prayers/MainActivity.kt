@@ -124,7 +124,7 @@ class MainActivity : Activity() {
             setPadding(40, 40, 40, 40)
             setBackgroundColor(android.graphics.Color.WHITE)
             addView(TextView(this@MainActivity).apply {
-                text = "Deen One ne peut pas charger la page. Vérifie ta connexion Internet."
+                text = "Deen One ne peut pas charger la page. Vérifie ta connexion Internet. Les rappels de prière déjà programmés sur ce téléphone restent actifs si tu les as autorisés."
                 textSize = 18f
                 gravity = Gravity.CENTER
             })
