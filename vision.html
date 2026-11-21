@@ -490,7 +490,7 @@ modeInputs.forEach(input=>input.addEventListener('change',()=>{
  const mode=input.value;
  localStorage.setItem('deen-home-location-mode',mode);
  window.dispatchEvent(new CustomEvent('deen-prayer-mode-changed',{detail:{mode}}));
- showPrayerMode();activeGpsCoords=null;lastAutoDay='';prayerRetryAfter=0;pendingPrayerRefresh=true;prayerRequestId++;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();
+ showPrayerMode();activeGpsCoords=null;confirmedTimezone=null;lastAutoDay='';prayerRetryAfter=0;pendingPrayerRefresh=true;prayerRequestId++;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();
  if(mode==='auto'){
   if(!navigator.geolocation||!window.isSecureContext){status.textContent=modeWords()[3];return}
   navigator.geolocation.getCurrentPosition(pos=>{
@@ -568,7 +568,7 @@ async function autoLoad(){
 function prayerSettingsChanged(){if(currentPrayerMode()!=='manual')return;
  const saved={city:city.value.trim(),country:country.value,method:method.value};
  if(saved.country){const previous=localStorage.getItem('deen-prayer-location');const updated=JSON.stringify(saved);if(previous!==updated){localStorage.setItem('deen-prayer-location',updated);window.dispatchEvent(new CustomEvent('deen-prayer-location-changed'));}}
- activeGpsCoords=null;lastAutoDay='';prayerRetryAfter=0;pendingPrayerRefresh=true;prayerRequestId++;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();list.replaceChildren();qibla.hidden=true;autoLoad()}
+ activeGpsCoords=null;confirmedTimezone=null;lastAutoDay='';prayerRetryAfter=0;pendingPrayerRefresh=true;prayerRequestId++;if(activePrayerController)activePrayerController.abort();if(activeGeoController)activeGeoController.abort();list.replaceChildren();qibla.hidden=true;autoLoad()}
 // Other components may request GPS for the compass, but only the explicit button above changes prayer timetable location.
 document.querySelectorAll('[data-tab="prayer"],[data-go="prayer"]').forEach(b=>b.addEventListener('click',()=>setTimeout(autoLoad,0)));
 window.addEventListener('hashchange',()=>setTimeout(autoLoad,0));
