@@ -8,4 +8,5 @@
     <string name="prayer_maghrib">المغرب</string>
     <string name="prayer_isha">العشاء</string>
     <string name="prayer_channel_name">تذكيرات الصلاة</string>
+    <string name="prayer_channel_description">إشعارات الصلوات الخمس اليومية</string>
 </resources>
