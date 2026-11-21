@@ -533,15 +533,23 @@ const prayerMessages={"fr":["Indiquez une ville et un pays.","Chargement des hor
  const match=/^(\d{2})-(\d{2})-(\d{4})$/.exec(firstDate);
  if(!match)return;
  const base=new Date(Date.UTC(Number(match[3]),Number(match[2])-1,Number(match[1])));
- if(!Number.isFinite(base.getTime()))return;
+ if(!Number.isFinite(base.getTime())||
+    base.getUTCFullYear()!==Number(match[3])||
+    base.getUTCMonth()+1!==Number(match[2])||
+    base.getUTCDate()!==Number(match[1]))return;
  const names=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
  function parseDay(data){
   if(!data||data.meta?.timezone!==timezone)return null;
   const dateMatch=/^(\d{2})-(\d{2})-(\d{4})$/.exec(data.date?.gregorian?.date||'');
   if(!dateMatch)return null;
+  const parsedDate=new Date(Date.UTC(Number(dateMatch[3]),Number(dateMatch[2])-1,Number(dateMatch[1])));
+  if(!Number.isFinite(parsedDate.getTime())||
+     parsedDate.getUTCFullYear()!==Number(dateMatch[3])||
+     parsedDate.getUTCMonth()+1!==Number(dateMatch[2])||
+     parsedDate.getUTCDate()!==Number(dateMatch[1]))return null;
   const timings={};
   for(const name of names){
-   const m=/^([01]?\d|2[0-3]):([0-5]\d)/.exec(data.timings?.[name]||'');
+   const m=/^([01]?\d|2[0-3]):([0-5]\d)(?:\s*\([^)]*\))?$/.exec(data.timings?.[name]||'');
    if(!m)return null;
    timings[name]=m[1].padStart(2,'0')+':'+m[2];
   }
