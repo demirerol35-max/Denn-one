@@ -172,8 +172,7 @@ class MainActivity : Activity() {
                         .put("enabled", PrayerScheduleCoordinator.isEnabled(this))
                         .put("hasSchedule", PrayerScheduleCoordinator.hasSchedule(this))
                         .put("notificationPermissionGranted",
-                            Build.VERSION.SDK_INT < 33 ||
-                                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+                            PrayerAlarms.notificationsAllowed(this))
                         .toString()
                 )
             }
