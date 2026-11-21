@@ -53,6 +53,20 @@ class PrayerWeekPayloadTest {
         assertNull(PrayerWeekPayload.parse(payload, requireToday = false))
     }
 
+    @Test fun matchesSecondDayWithoutDiscardingFutureAlarms() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val week = PrayerWeekPayload.parse(batch(day(today), day(today.plusDays(1))))
+        val second = PrayerSchedulePayload.parse(day(today.plusDays(1)))!!
+        assertTrue(PrayerWeekPayload.matchesDay(week, second))
+    }
+
+    @Test fun rejectsChangedPrayerTimesForSameDay() {
+        val today = LocalDate.now(java.time.ZoneId.of(zone))
+        val week = PrayerWeekPayload.parse(batch(day(today), day(today.plusDays(1))))
+        val changed = PrayerSchedulePayload.parse(day(today.plusDays(1)).replace("05:30", "05:31"))!!
+        assertFalse(PrayerWeekPayload.matchesDay(week, changed))
+    }
+
     @Test fun rejectsMalformedPrayerTimes() {
         val today = LocalDate.now(java.time.ZoneId.of(zone))
         assertNull(PrayerWeekPayload.parse(batch(day(today).replace("05:30", "25:30"))))
