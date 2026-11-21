@@ -12,7 +12,7 @@ import java.time.ZoneId
 object PrayerWeekPayload {
     data class Week(val timezone: String, val days: List<PrayerSchedulePayload.Schedule>)
 
-    fun parse(json: String): Week? = runCatching {
+    fun parse(json: String, requireToday: Boolean = true): Week? = runCatching {
         val root = JSONObject(json)
         val timezone = root.getString("timezone")
         ZoneId.of(timezone)
@@ -28,7 +28,8 @@ object PrayerWeekPayload {
             "Days must be consecutive"
         }
         val today = LocalDate.now(ZoneId.of(timezone))
-        require(days.first().date == today) { "Batch must start today" }
+        if (requireToday) require(days.first().date == today) { "Batch must start today" }
+        else require(!days.last().date.isBefore(today)) { "Batch has expired" }
         Week(timezone, days)
     }.getOrNull()
 }
