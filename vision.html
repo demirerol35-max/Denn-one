@@ -546,7 +546,7 @@ const controller=new AbortController();activePrayerController=controller;const t
  }
 }catch(e){}}prayerRetryAfter=0}catch(e){if(requestId===prayerRequestId){status.textContent=prayerText(2);lastAutoDay='';prayerRetryAfter=Date.now()+300000;list.replaceChildren();qibla.hidden=true}}finally{if(requestId===prayerRequestId){activePrayerController=null;activeGeoController=null;/* automatic refresh */}else{/* superseded request */}}}
 let lastAutoDay='',loadingAuto=false,pendingPrayerRefresh=false,activeGpsCoords=null;
-function prayerLocalDay(){if(confirmedTimezone){try{return new Intl.DateTimeFormat('en-CA',{timeZone:confirmedTimezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch(e){}}return new Date().toDateString()}
+function prayerLocalDay(){const now=new Date();if(confirmedTimezone){try{const parts=new Intl.DateTimeFormat('en-GB',{timeZone:confirmedTimezone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);const value=type=>parts.find(p=>p.type===type)?.value;return value('year')+'-'+value('month')+'-'+value('day')}catch(e){}}return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')}
 async function autoLoad(){
  if(document.getElementById('prayer').hidden||document.hidden)return;
  if(currentPrayerMode()==='manual')activeGpsCoords=null;
