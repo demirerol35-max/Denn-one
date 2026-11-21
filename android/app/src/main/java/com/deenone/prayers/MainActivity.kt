@@ -174,11 +174,7 @@ class MainActivity : Activity() {
                                         PrayerScheduleCoordinator.setEnabled(this, true)
                                         offerExactAlarmPermission()
                                     } else {
-                                        AlertDialog.Builder(this)
-                                            .setTitle("Notifications désactivées")
-                                            .setMessage("Les notifications de Deen One sont bloquées dans les paramètres Android. Autorise-les pour recevoir les rappels.")
-                                            .setPositiveButton("OK", null)
-                                            .show()
+                                        showNotificationSettingsDialog()
                                     }
                                     refreshReminderStatusInWebView()
                                 }
@@ -216,6 +212,27 @@ class MainActivity : Activity() {
         } else {
             webView.restoreState(savedInstanceState)
         }
+    }
+
+    private fun showNotificationSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Notifications désactivées")
+            .setMessage("Les notifications de Deen One sont bloquées. Autorise-les dans les paramètres Android pour recevoir les rappels de prière.")
+            .setNegativeButton("Plus tard", null)
+            .setPositiveButton("Ouvrir les paramètres") { _, _ ->
+                runCatching {
+                    startActivity(
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    )
+                }.onFailure {
+                    startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(Uri.parse("package:$packageName"))
+                    )
+                }
+            }
+            .show()
     }
 
     private fun offerExactAlarmPermission() {
