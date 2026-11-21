@@ -76,7 +76,13 @@ object PrayerAlarms {
     fun ensureChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL, context.getString(R.string.prayer_channel_name), NotificationManager.IMPORTANCE_HIGH)
+            NotificationChannel(
+                CHANNEL,
+                context.getString(R.string.prayer_channel_name),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = context.getString(R.string.prayer_channel_description)
+            }
         )
     }
 
