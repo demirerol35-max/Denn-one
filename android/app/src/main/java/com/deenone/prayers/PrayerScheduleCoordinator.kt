@@ -20,6 +20,10 @@ object PrayerScheduleCoordinator {
      */
     fun update(context: Context, payload: String): Boolean {
         val parsed = PrayerSchedulePayload.parse(payload) ?: return false
+        // Never replace a valid future schedule with an expired one.
+        val todayAtPrayerLocation = java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
+        if (parsed.date.isBefore(todayAtPrayerLocation) ||
+            parsed.date.isAfter(todayAtPrayerLocation.plusDays(1))) return false
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val enabled = preferences.getBoolean(ENABLED, false)
         // Save before scheduling so a later boot receiver can restore the schedule.
