@@ -72,11 +72,20 @@ object PrayerScheduleCoordinator {
             .toInstant().toEpochMilli()
     }
 
+    fun expectedWeekAlarmTime(context: Context, date: String, prayer: String): Long? {
+        val day = storedWeek(context)?.days?.firstOrNull { it.date.toString() == date } ?: return null
+        if (day.date.isBefore(java.time.LocalDate.now(java.time.ZoneId.of(day.timezone)))) return null
+        val time = day.timings[prayer]?.let(java.time.LocalTime::parse) ?: return null
+        return java.time.ZonedDateTime.of(day.date, time, java.time.ZoneId.of(day.timezone))
+            .toInstant().toEpochMilli()
+    }
+
     fun setEnabled(context: Context, enabled: Boolean) {
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!preferences.edit().putBoolean(ENABLED, enabled).commit()) return
         if (!enabled) {
             PrayerAlarms.cancelAll(context)
+            storedWeek(context)?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
             return
         }
         restore(context)
@@ -91,6 +100,14 @@ object PrayerScheduleCoordinator {
         if (!preferences.getBoolean(ENABLED, false)) {
             PrayerAlarms.cancelAll(context)
             return false
+        }
+        val week = storedWeek(context)
+        if (week != null && week.days.any { day ->
+                !day.date.isBefore(java.time.LocalDate.now(java.time.ZoneId.of(day.timezone)))
+            }) {
+            PrayerAlarms.cancelAll(context)
+            PrayerAlarms.scheduleWeek(context, week.days, true)
+            return true
         }
         val payload = preferences.getString(SCHEDULE, null) ?: return false
         val parsed = PrayerSchedulePayload.parse(payload) ?: return false
@@ -107,7 +124,8 @@ object PrayerScheduleCoordinator {
 
     fun clear(context: Context) {
         PrayerAlarms.cancelAll(context)
+        storedWeek(context)?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().remove(SCHEDULE).apply()
+            .edit().remove(SCHEDULE).remove(WEEK).apply()
     }
 }
