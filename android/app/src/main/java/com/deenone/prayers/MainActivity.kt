@@ -78,6 +78,12 @@ class MainActivity : Activity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                     mainPageFailed = false
+                    // Revoke any outstanding geolocation prompt when navigation
+                    // begins; its callback belongs to the previous document.
+                    pendingLocation?.let { (origin, callback) ->
+                        callback.invoke(origin, false, false)
+                    }
+                    pendingLocation = null
                 }
                 override fun onReceivedError(
                     view: WebView, request: WebResourceRequest, error: WebResourceError
