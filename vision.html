@@ -530,18 +530,18 @@ const prayerMessages={"fr":["Indiquez une ville et un pays.","Chargement des hor
  const bridge=window.DeenOneAndroid;
  if(!bridge||typeof bridge.postMessage!=='function'||!timezone)return;
  const firstDate=firstDay?.date?.gregorian?.date||'';
- const match=/^(\\d{2})-(\\d{2})-(\\d{4})$/.exec(firstDate);
+ const match=/^(\d{2})-(\d{2})-(\d{4})$/.exec(firstDate);
  if(!match)return;
  const base=new Date(Date.UTC(Number(match[3]),Number(match[2])-1,Number(match[1])));
  if(!Number.isFinite(base.getTime()))return;
  const names=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
  function parseDay(data){
   if(!data||data.meta?.timezone!==timezone)return null;
-  const dateMatch=/^(\\d{2})-(\\d{2})-(\\d{4})$/.exec(data.date?.gregorian?.date||'');
+  const dateMatch=/^(\d{2})-(\d{2})-(\d{4})$/.exec(data.date?.gregorian?.date||'');
   if(!dateMatch)return null;
   const timings={};
   for(const name of names){
-   const m=/^([01]?\\d|2[0-3]):([0-5]\\d)/.exec(data.timings?.[name]||'');
+   const m=/^([01]?\d|2[0-3]):([0-5]\d)/.exec(data.timings?.[name]||'');
    if(!m)return null;
    timings[name]=m[1].padStart(2,'0')+':'+m[2];
   }
