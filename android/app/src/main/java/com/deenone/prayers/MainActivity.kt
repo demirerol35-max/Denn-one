@@ -5,6 +5,8 @@ import androidx.webkit.WebViewFeature
 import org.json.JSONObject
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
+import android.os.Build
 import android.content.pm.PackageManager
 import android.webkit.GeolocationPermissions
 import android.webkit.WebChromeClient
@@ -32,6 +34,8 @@ class MainActivity : Activity() {
     private var mainPageFailed = false
     private var pendingLocation: Pair<String, GeolocationPermissions.Callback>? = null
     private val locationRequestCode = 1401
+    private val notificationRequestCode = 1402
+    private var notificationConsentPending = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -135,6 +139,26 @@ class MainActivity : Activity() {
                         val payload = request.optJSONObject("payload")?.toString()
                         payload != null && PrayerScheduleCoordinator.update(this, payload)
                     }
+                    "enable" -> {
+                        // Explicit native confirmation before enabling persistent alarms.
+                        AlertDialog.Builder(this)
+                            .setTitle("Rappels des cinq prières")
+                            .setMessage("Autoriser Deen One à programmer les rappels de prière sur ce téléphone ?")
+                            .setNegativeButton("Non", null)
+                            .setPositiveButton("Autoriser") { _, _ ->
+                                if (Build.VERSION.SDK_INT >= 33 &&
+                                    checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                    notificationConsentPending = true
+                                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationRequestCode)
+                                } else {
+                                    PrayerScheduleCoordinator.setEnabled(this, true)
+                                }
+                            }
+                            .show()
+                        // Consent is asynchronous: this is an acknowledgement of the request,
+                        // not confirmation that reminders are enabled.
+                        true
+                    }
                     "disable" -> {
                         PrayerScheduleCoordinator.setEnabled(this, false)
                         true
@@ -157,6 +181,14 @@ class MainActivity : Activity() {
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == notificationRequestCode) {
+            if (notificationConsentPending &&
+                grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+                PrayerScheduleCoordinator.setEnabled(this, true)
+            }
+            notificationConsentPending = false
+            return
+        }
         if (requestCode != locationRequestCode) return
         pendingLocation?.let { (origin, callback) ->
             callback.invoke(origin, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED, false)
