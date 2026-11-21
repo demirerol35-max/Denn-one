@@ -147,4 +147,38 @@ await sandbox.sendAndroidPrayerWeek({
   timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
 });
 assert.equal(sent.length, 0, 'Malformed time suffix must be rejected');
+
+// An API response for the wrong day must never be assigned to a requested date.
+sandbox.fetch = async () => ({
+  ok:true, json:async () => ({code:200,data:{
+    date:{gregorian:{date:'21-11-2026'}},
+    meta:{timezone:'Europe/Paris'},
+    timings:{Fajr:'05:30',Dhuhr:'12:30',Asr:'15:30',Maghrib:'18:30',Isha:'20:00'}
+  }})
+});
+sent.length = 0;
+await sandbox.sendAndroidPrayerWeek({
+  params:new URLSearchParams(),endpoint:'timingsByCity',firstDay,
+  timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
+});
+assert.equal(sent.length, 0, 'Wrong-day API response must not schedule alarms');
+
+// A valid timezone abbreviation from AlAdhan remains accepted.
+sandbox.fetch = async url => {
+  const match = new RegExp('([0-9]{2})-([0-9]{2})-([0-9]{4})\\?').exec(url);
+  assert.ok(match);
+  return {ok:true,json:async () => ({code:200,data:{
+    date:{gregorian:{date:match[1]+'-'+match[2]+'-'+match[3]}},
+    meta:{timezone:'Europe/Paris'},
+    timings:{Fajr:'05:30 (CET)',Dhuhr:'12:30 (CET)',Asr:'15:30 (CET)',
+      Maghrib:'18:30 (CET)',Isha:'20:00 (CET)'}
+  }})};
+};
+sent.length = 0;
+await sandbox.sendAndroidPrayerWeek({
+  params:new URLSearchParams(),endpoint:'timingsByCity',firstDay,
+  timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
+});
+assert.equal(sent.length, 1, 'Valid timezone suffix must be accepted');
+assert.equal(sent[0].payload.days[1].timings.Fajr, '05:30');
 console.log('OK: ' + scripts.length + ' inline scripts parse; weekly prayer bridge runtime checks pass.');
