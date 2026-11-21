@@ -40,6 +40,9 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Create the notification channel before checking its permission state.
+        // Users can then manage prayer reminders in Android system settings.
+        PrayerAlarms.ensureChannel(this)
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
