@@ -29,6 +29,12 @@ class PrayerScheduleAvailabilityTest {
         assertFalse(PrayerScheduleAvailability.hasFuturePrayer(day, now))
     }
 
+    @Test fun finalPrayerIsDueEvenWhenNoFuturePrayerRemains() {
+        val isha = PrayerInstant.epochMillis(day.date, "19:00", day.timezone)
+        assertFalse(PrayerScheduleAvailability.hasFuturePrayer(day, isha))
+        assertTrue(PrayerAlarmTiming.isDue(isha, isha))
+    }
+
     @Test fun yesterdayScheduleHasNoFuturePrayer() {
         val now = PrayerInstant.epochMillis(day.date.plusDays(1), "00:00", day.timezone)
         assertFalse(PrayerScheduleAvailability.hasFuturePrayer(day, now))
