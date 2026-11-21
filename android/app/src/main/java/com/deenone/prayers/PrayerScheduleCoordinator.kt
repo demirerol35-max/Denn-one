@@ -45,7 +45,7 @@ object PrayerScheduleCoordinator {
 
     private fun storedWeek(context: Context): PrayerWeekPayload.Week? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(WEEK, null)?.let(PrayerWeekPayload::parse)
+            .getString(WEEK, null)?.let { PrayerWeekPayload.parse(it, requireToday = false) }
 
     fun updateWeek(context: Context, payload: String): Boolean {
         val week = PrayerWeekPayload.parse(payload) ?: return false
