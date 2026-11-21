@@ -50,6 +50,11 @@ class PrayerSchedulePayloadTest {
         assertEquals("06:12", parsed?.timings?.get("Fajr"))
     }
 
+    @Test fun rejectsEmptyOrWhitespaceTimezoneSuffix() {
+        assertNull(PrayerSchedulePayload.parse(payload(fajr = "06:12 ()")))
+        assertNull(PrayerSchedulePayload.parse(payload(fajr = "06:12 ( )")))
+    }
+
     @Test fun rejectsTrailingTextAfterValidTime() {
         assertNull(PrayerSchedulePayload.parse(payload(fajr = "06:12INVALID")))
         assertNull(PrayerSchedulePayload.parse(payload(fajr = "06:12 extra")))
