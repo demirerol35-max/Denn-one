@@ -80,10 +80,18 @@ object PrayerAlarms {
         )
     }
 
-    internal fun notifyPrayer(context: Context, prayer: String) {
+    fun notificationsAllowed(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return
+        ) return false
+        val manager = context.getSystemService(NotificationManager::class.java)
+        if (!manager.areNotificationsEnabled()) return false
+        val channel = manager.getNotificationChannel(CHANNEL)
+        return channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    internal fun notifyPrayer(context: Context, prayer: String) {
+        if (!notificationsAllowed(context)) return
         ensureChannel(context)
         val openApp = PendingIntent.getActivity(
             context, 0,
