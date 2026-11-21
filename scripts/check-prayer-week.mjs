@@ -69,4 +69,17 @@ await sandbox.sendAndroidPrayerWeek({
   timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
 });
 assert.equal(sent.length, 0, 'Stale requests must not schedule alarms');
+sandbox.prayerRequestId = 7;
+sandbox.fetch = async () => ({
+  ok:true, json:async () => ({ code:200, data:{
+    date:{gregorian:{date:'22-11-2026'}},
+    meta:{timezone:'Europe/Paris'},
+    timings:{Fajr:'25:99',Dhuhr:'12:30',Asr:'15:30',Maghrib:'18:30',Isha:'20:00'}
+  } })
+});
+await sandbox.sendAndroidPrayerWeek({
+  params:new URLSearchParams(),endpoint:'timingsByCity',firstDay,
+  timezone:'Europe/Paris',requestId:7,signal:{aborted:false}
+});
+assert.equal(sent.length, 0, 'Invalid API times must not schedule alarms');
 console.log('OK: ' + scripts.length + ' inline scripts parse; weekly prayer bridge runtime checks pass.');
