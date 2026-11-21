@@ -36,6 +36,7 @@ class MainActivity : Activity() {
     private val locationRequestCode = 1401
     private val notificationRequestCode = 1402
     private var notificationConsentPending = false
+    private var reminderDialogOpen = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -140,8 +141,10 @@ class MainActivity : Activity() {
                         payload != null && PrayerScheduleCoordinator.update(this, payload)
                     }
                     "enable" -> {
-                        // Explicit native confirmation before enabling persistent alarms.
-                        AlertDialog.Builder(this)
+                        // Ignore duplicate taps while the consent dialog is visible.
+                        if (!reminderDialogOpen) {
+                            reminderDialogOpen = true
+                            AlertDialog.Builder(this)
                             .setTitle("Rappels des cinq prières")
                             .setMessage("Autoriser Deen One à programmer les rappels de prière sur ce téléphone ?")
                             .setNegativeButton("Non", null)
@@ -163,7 +166,9 @@ class MainActivity : Activity() {
                                     refreshReminderStatusInWebView()
                                 }
                             }
+                            .setOnDismissListener { reminderDialogOpen = false }
                             .show()
+                        }
                         // Consent is asynchronous: this is an acknowledgement of the request,
                         // not confirmation that reminders are enabled.
                         true
