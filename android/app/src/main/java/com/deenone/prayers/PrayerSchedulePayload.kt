@@ -18,7 +18,7 @@ object PrayerSchedulePayload {
 
     private val names = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
     // Accept plain HH:mm or an API timezone suffix, never arbitrary trailing text.
-    private val clock = Regex("^(([01]\\d|2[0-3]):[0-5]\\d)(?: \\([^()]*\\))?$")
+    private val clock = Regex("^(([01]\\d|2[0-3]):[0-5]\\d)(?: \\([^()\\s]+\\))?$")
 
     fun parse(json: String): Schedule? = runCatching {
         val data = JSONObject(json)
