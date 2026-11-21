@@ -82,17 +82,15 @@ object PrayerScheduleCoordinator {
         val schedule = PrayerSchedulePayload.parse(stored) ?: return null
         val zone = java.time.ZoneId.of(schedule.timezone)
         if (schedule.date != java.time.LocalDate.now(zone)) return null
-        val time = schedule.timings[prayer]?.let(java.time.LocalTime::parse) ?: return null
-        return java.time.ZonedDateTime.of(schedule.date, time, zone)
-            .toInstant().toEpochMilli()
+        val time = schedule.timings[prayer] ?: return null
+        return PrayerInstant.epochMillis(schedule.date, time, schedule.timezone)
     }
 
     fun expectedWeekAlarmTime(context: Context, date: String, prayer: String): Long? {
         val day = storedWeek(context)?.days?.firstOrNull { it.date.toString() == date } ?: return null
         if (day.date.isBefore(java.time.LocalDate.now(java.time.ZoneId.of(day.timezone)))) return null
-        val time = day.timings[prayer]?.let(java.time.LocalTime::parse) ?: return null
-        return java.time.ZonedDateTime.of(day.date, time, java.time.ZoneId.of(day.timezone))
-            .toInstant().toEpochMilli()
+        val time = day.timings[prayer] ?: return null
+        return PrayerInstant.epochMillis(day.date, time, day.timezone)
     }
 
     fun setEnabled(context: Context, enabled: Boolean) {
