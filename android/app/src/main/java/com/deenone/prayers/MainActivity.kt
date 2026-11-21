@@ -228,7 +228,9 @@ class MainActivity : Activity() {
         val page = runCatching { Uri.parse(webView.url ?: "") }.getOrNull()
         return page?.scheme == "https" &&
             page.host == "demirerol35-max.github.io" &&
-            page.path?.startsWith("/Denn-one/") == true
+            page.path == "/Denn-one/vision.html" &&
+            page.port == -1 &&
+            page.userInfo == null
     }
 
     private fun showNotificationSettingsDialog() {
