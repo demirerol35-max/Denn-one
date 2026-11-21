@@ -11,12 +11,12 @@ class PrayerAlarmTimingTest {
         assertFalse(PrayerAlarmTiming.isDue(-1L, scheduled))
     }
 
-    @Test fun rejectsAlarmMoreThanOneMinuteEarly() {
+    @Test fun rejectsAnyEarlyAlarm() {
         assertFalse(PrayerAlarmTiming.isDue(scheduled, scheduled - 60_001L))
+        assertFalse(PrayerAlarmTiming.isDue(scheduled, scheduled - 1L))
     }
 
-    @Test fun acceptsAlarmWithinTolerance() {
-        assertTrue(PrayerAlarmTiming.isDue(scheduled, scheduled - 60_000L))
+    @Test fun acceptsAlarmAtExactTime() {
         assertTrue(PrayerAlarmTiming.isDue(scheduled, scheduled))
     }
 
