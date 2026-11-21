@@ -1058,11 +1058,11 @@ prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>mo
  if(!panel||!status||!toggle||!bridge||typeof bridge.postMessage!=='function')return;
  panel.hidden=false;
  const translations={
-  fr:['Vérification des rappels Android…','Rappels Android activés','Rappels Android désactivés','Autoriser les rappels Android','Désactiver les rappels Android','Autorisation des notifications refusée dans Android','Aucun horaire de prière enregistré'],
-  en:['Checking Android reminders…','Android reminders enabled','Android reminders disabled','Allow Android reminders','Disable Android reminders','Android notification permission denied','No prayer schedule saved'],
-  tr:['Android hatırlatıcıları kontrol ediliyor…','Android hatırlatıcıları açık','Android hatırlatıcıları kapalı','Android hatırlatıcılarına izin ver','Android hatırlatıcılarını kapat','Android bildirim izni reddedildi','Kayıtlı namaz vakti yok'],
-  de:['Android-Erinnerungen werden geprüft…','Android-Erinnerungen aktiviert','Android-Erinnerungen deaktiviert','Android-Erinnerungen erlauben','Android-Erinnerungen deaktivieren','Android-Benachrichtigungen nicht erlaubt','Keine Gebetszeiten gespeichert'],
-  ar:['جارٍ التحقق من تذكيرات أندرويد…','تذكيرات أندرويد مفعلة','تذكيرات أندرويد معطلة','السماح بتذكيرات أندرويد','إيقاف تذكيرات أندرويد','إذن إشعارات أندرويد مرفوض','لم تُحفظ مواقيت الصلاة']
+  fr:['Vérification des rappels Android…','Rappels Android activés','Rappels Android désactivés','Autoriser les rappels Android','Désactiver les rappels Android','Autorisation des notifications refusée dans Android','Aucun horaire de prière enregistré','Les alarmes exactes ne sont pas autorisées : les rappels peuvent arriver en retard'],
+  en:['Checking Android reminders…','Android reminders enabled','Android reminders disabled','Allow Android reminders','Disable Android reminders','Android notification permission denied','No prayer schedule saved','Exact alarms are not allowed: reminders may arrive late'],
+  tr:['Android hatırlatıcıları kontrol ediliyor…','Android hatırlatıcıları açık','Android hatırlatıcıları kapalı','Android hatırlatıcılarına izin ver','Android hatırlatıcılarını kapat','Android bildirim izni reddedildi','Kayıtlı namaz vakti yok','Kesin alarm izni yok: hatırlatmalar gecikebilir'],
+  de:['Android-Erinnerungen werden geprüft…','Android-Erinnerungen aktiviert','Android-Erinnerungen deaktiviert','Android-Erinnerungen erlauben','Android-Erinnerungen deaktivieren','Android-Benachrichtigungen nicht erlaubt','Keine Gebetszeiten gespeichert','Exakte Alarme sind nicht erlaubt: Erinnerungen können verspätet sein'],
+  ar:['جارٍ التحقق من تذكيرات أندرويد…','تذكيرات أندرويد مفعلة','تذكيرات أندرويد معطلة','السماح بتذكيرات أندرويد','إيقاف تذكيرات أندرويد','إذن إشعارات أندرويد مرفوض','لم تُحفظ مواقيت الصلاة','المنبهات الدقيقة غير مسموحة: قد تتأخر التذكيرات']
  };
  let enabled=false;
  const labels=()=>translations[localStorage.getItem('deen-app-language')]||translations.fr;
@@ -1078,6 +1078,7 @@ prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>mo
   status.textContent=enabled?t[1]:t[2];
   if(enabled&&!data.notificationPermissionGranted)status.textContent+=' · '+t[5];
   if(!data.hasSchedule)status.textContent+=' · '+t[6];
+  if(data.exactAlarmsAllowed===false)status.textContent+=' · '+t[7];
   toggle.textContent=enabled?t[4]:t[3];
   toggle.disabled=false;
  };
