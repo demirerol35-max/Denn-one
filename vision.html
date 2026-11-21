@@ -556,12 +556,18 @@ const prayerMessages={"fr":["Indiquez une ville et un pays.","Chargement des hor
   const mm=String(date.getUTCMonth()+1).padStart(2,'0');
   const yyyy=date.getUTCFullYear();
   const url='https://api.aladhan.com/v1/'+endpoint+'/'+dd+'-'+mm+'-'+yyyy+'?'+params.toString();
-  const response=await fetch(url,{signal,cache:'no-store'});
-  if(!response.ok)return null;
-  const json=await response.json();
-  if(json.code!==200)return null;
-  const day=parseDay(json.data);
-  return day&&day.date===yyyy+'-'+mm+'-'+dd?day:null;
+  try {
+   const response=await fetch(url,{signal,cache:'no-store'});
+   if(!response.ok)return null;
+   const json=await response.json();
+   if(json.code!==200)return null;
+   const day=parseDay(json.data);
+   return day&&day.date===yyyy+'-'+mm+'-'+dd?day:null;
+  } catch {
+   // One failed request must not create an unhandled rejection or
+   // allow an incomplete week to reach Android.
+   return null;
+  }
  }));
  if(remaining.some(day=>!day)||signal.aborted||requestId!==prayerRequestId)return;
  bridge.postMessage(JSON.stringify({type:'scheduleWeek',payload:{timezone,days:[first,...remaining]}}));
