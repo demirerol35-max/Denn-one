@@ -52,7 +52,9 @@ object PrayerScheduleCoordinator {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         // Expired batches still contain PendingIntent identities to cancel.
         val old = storedWeek(context, allowExpired = true)
-        if (!prefs.edit().putString(WEEK, payload).commit()) return false
+        // The week supersedes the single-day schedule. Remove its saved
+        // identity too, so a delayed daily broadcast cannot notify twice.
+        if (!prefs.edit().putString(WEEK, payload).remove(SCHEDULE).commit()) return false
         old?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
         PrayerAlarms.cancelAll(context)
         PrayerAlarms.scheduleWeek(context, week.days, isEnabled(context))
