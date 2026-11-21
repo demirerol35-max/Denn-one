@@ -152,8 +152,14 @@ object PrayerAlarms {
             .setContentIntent(openApp)
             .setAutoCancel(true)
             .build()
-        context.getSystemService(NotificationManager::class.java)
-            .notify(prayer.hashCode(), notification)
+        // Notification permission or channel settings may change between
+        // the earlier check and posting. Avoid crashing the broadcast receiver.
+        try {
+            context.getSystemService(NotificationManager::class.java)
+                .notify(prayer.hashCode(), notification)
+        } catch (_: SecurityException) {
+            // Android revoked permission while the reminder was being delivered.
+        }
     }
 }
 
