@@ -28,7 +28,7 @@ const sandbox = {
   prayerRequestId: 7,
   fetch: async url => {
     requests.push(url);
-    const match = /\\/(\\d{2})-(\\d{2})-(\\d{4})\\?/.exec(url);
+    const match = new RegExp('([0-9]{2})-([0-9]{2})-([0-9]{4})\\?').exec(url);
     assert.ok(match, 'Expected dated AlAdhan endpoint');
     const date = match[1] + '-' + match[2] + '-' + match[3];
     return { ok: true, json: async () => ({
