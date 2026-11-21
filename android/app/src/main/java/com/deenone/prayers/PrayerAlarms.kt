@@ -51,10 +51,10 @@ object PrayerAlarms {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarms.canScheduleExactAlarms()) {
                     alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, scheduledPending)
                 } else {
-                    alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                    alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, scheduledPending)
                 }
             } catch (_: SecurityException) {
-                alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, scheduledPending)
             }
         }
     }
