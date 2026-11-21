@@ -8,4 +8,5 @@
     <string name="prayer_maghrib">Maghrib</string>
     <string name="prayer_isha">Isha</string>
     <string name="prayer_channel_name">Prayer reminders</string>
+    <string name="prayer_channel_description">Notifications for the five daily prayers</string>
 </resources>
