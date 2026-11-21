@@ -17,7 +17,7 @@ object PrayerWeekPayload {
             it.timezone == day.timezone && it.timings == day.timings
         } == true
 
-    fun parse(json: String, requireToday: Boolean = true): Week? = runCatching {
+    fun parse(json: String, requireToday: Boolean = true, allowExpired: Boolean = false): Week? = runCatching {
         val root = JSONObject(json)
         val timezone = root.getString("timezone")
         ZoneId.of(timezone)
@@ -34,7 +34,7 @@ object PrayerWeekPayload {
         }
         val today = LocalDate.now(ZoneId.of(timezone))
         if (requireToday) require(days.first().date == today) { "Batch must start today" }
-        else require(!days.last().date.isBefore(today)) { "Batch has expired" }
+        else if (!allowExpired) require(!days.last().date.isBefore(today)) { "Batch has expired" }
         Week(timezone, days)
     }.getOrNull()
 }
