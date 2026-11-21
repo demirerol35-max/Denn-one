@@ -41,6 +41,24 @@ jobs:
           gradle-version: '8.9'
       - name: Run Android unit tests and build debug APK
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - name: Upload Android unit-test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deen-one-unit-test-reports
+          path: |
+            android/app/build/test-results/testDebugUnitTest/
+            android/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+      - name: Upload Android build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deen-one-build-diagnostics
+          path: |
+            android/app/build/reports/
+            android/app/build/outputs/logs/
+          if-no-files-found: ignore
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
