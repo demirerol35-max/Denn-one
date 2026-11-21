@@ -25,32 +25,33 @@ object PrayerScheduleCoordinator {
         if (parsed.date != todayAtPrayerLocation) return false
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val enabled = preferences.getBoolean(ENABLED, false)
-        // Only today's schedule is supported until multi-day alarms are implemented.
-        // Save before scheduling so a later boot receiver can restore the schedule.
+        // Keep a valid weekly schedule if this daily refresh agrees with it.
+        // Also read expired batches for cleanup of their alarm identities.
         val previousWeek = storedWeek(context)
+        val oldWeekForCleanup = storedWeek(context, allowExpired = true)
         val matchesWeek = PrayerWeekPayload.matchesDay(previousWeek, parsed)
         // A normal refresh of today's unchanged API times must not erase the
         // future alarms already saved for the coming days.
         if (matchesWeek) return true
         if (!preferences.edit().putString(SCHEDULE, payload).remove(WEEK).commit()) return false
-        previousWeek?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
+        oldWeekForCleanup?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
         PrayerAlarms.scheduleDay(
             context, parsed.date, parsed.timezone, parsed.timings, enabled
         )
         return true
     }
 
-    private fun storedWeek(context: Context): PrayerWeekPayload.Week? =
+    private fun storedWeek(context: Context, allowExpired: Boolean = false): PrayerWeekPayload.Week? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(WEEK, null)?.let { PrayerWeekPayload.parse(it, requireToday = false) }
+            .getString(WEEK, null)?.let {
+                PrayerWeekPayload.parse(it, requireToday = false, allowExpired = allowExpired)
+            }
 
     fun updateWeek(context: Context, payload: String): Boolean {
         val week = PrayerWeekPayload.parse(payload) ?: return false
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         // Expired batches still contain PendingIntent identities to cancel.
-        val old = prefs.getString(WEEK, null)?.let {
-            PrayerWeekPayload.parse(it, requireToday = false, allowExpired = true)
-        }
+        val old = storedWeek(context, allowExpired = true)
         if (!prefs.edit().putString(WEEK, payload).commit()) return false
         old?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
         PrayerAlarms.cancelAll(context)
@@ -97,7 +98,7 @@ object PrayerScheduleCoordinator {
         if (!preferences.edit().putBoolean(ENABLED, enabled).commit()) return
         if (!enabled) {
             PrayerAlarms.cancelAll(context)
-            storedWeek(context)?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
+            storedWeek(context, allowExpired = true)?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
             return
         }
         restore(context)
@@ -111,7 +112,7 @@ object PrayerScheduleCoordinator {
         val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!preferences.getBoolean(ENABLED, false)) {
             PrayerAlarms.cancelAll(context)
-            storedWeek(context)?.let { week ->
+            storedWeek(context, allowExpired = true)?.let { week ->
                 PrayerAlarms.cancelWeek(context, week.days.map { it.date })
             }
             return false
@@ -126,7 +127,9 @@ object PrayerScheduleCoordinator {
         }
         // An expired weekly batch must not leave alarms pending from earlier
         // dates, even if the device clock or timezone was changed.
-        week?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
+        storedWeek(context, allowExpired = true)?.let { expired ->
+            PrayerAlarms.cancelWeek(context, expired.days.map { day -> day.date })
+        }
         val payload = preferences.getString(SCHEDULE, null) ?: return false
         val parsed = PrayerSchedulePayload.parse(payload) ?: return false
         val today = java.time.LocalDate.now(java.time.ZoneId.of(parsed.timezone))
@@ -142,7 +145,7 @@ object PrayerScheduleCoordinator {
 
     fun clear(context: Context) {
         PrayerAlarms.cancelAll(context)
-        storedWeek(context)?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
+        storedWeek(context, allowExpired = true)?.let { PrayerAlarms.cancelWeek(context, it.days.map { day -> day.date }) }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().remove(SCHEDULE).remove(WEEK).apply()
     }
