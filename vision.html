@@ -1070,7 +1070,7 @@ prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>mo
  const refresh=()=>send('status');
  status.textContent=labels()[0];
  toggle.disabled=true;
- bridge.addEventListener('message',event=>{
+ bridge.onmessage=event=>{
   let data;try{data=JSON.parse(event.data)}catch{return}
   if(!data||typeof data.enabled!=='boolean')return;
   enabled=data.enabled;
@@ -1080,7 +1080,7 @@ prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>mo
   if(!data.hasSchedule)status.textContent+=' · '+t[6];
   toggle.textContent=enabled?t[4]:t[3];
   toggle.disabled=false;
- });
+ };
  toggle.addEventListener('click',()=>{
   toggle.disabled=true;
   if(enabled)send('disable');else send('enable');
