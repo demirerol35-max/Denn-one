@@ -150,10 +150,18 @@ object PrayerAlarms {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val localizedPrayer = when (prayer) {
+            "Fajr" -> context.getString(R.string.prayer_fajr)
+            "Dhuhr" -> context.getString(R.string.prayer_dhuhr)
+            "Asr" -> context.getString(R.string.prayer_asr)
+            "Maghrib" -> context.getString(R.string.prayer_maghrib)
+            "Isha" -> context.getString(R.string.prayer_isha)
+            else -> return
+        }
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Heure de la prière : $prayer")
-            .setContentText("C’est l’heure de $prayer")
+            .setContentTitle(context.getString(R.string.prayer_notification_title, localizedPrayer))
+            .setContentText(context.getString(R.string.prayer_notification_body, localizedPrayer))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(openApp)
             .setAutoCancel(true)
