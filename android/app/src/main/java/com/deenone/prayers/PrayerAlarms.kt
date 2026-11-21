@@ -14,8 +14,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
 
 /**
  * Android-native prayer alarm foundation connected to the trusted WebView bridge.
@@ -33,14 +31,13 @@ object PrayerAlarms {
         notificationsEnabled: Boolean
     ) {
         val alarms = context.getSystemService(AlarmManager::class.java)
-        val zone = ZoneId.of(timezone)
         for ((index, prayer) in prayers.withIndex()) {
             val pending = pending(context, index, prayer)
             alarms.cancel(pending)
             if (!notificationsEnabled) continue
             val time = timings[prayer]?.trim()?.take(5) ?: continue
             val localTime = runCatching { LocalTime.parse(time) }.getOrNull() ?: continue
-            val at = ZonedDateTime.of(date, localTime, zone).toInstant().toEpochMilli()
+            val at = PrayerInstant.epochMillis(date, localTime.toString(), timezone)
             if (at <= System.currentTimeMillis()) continue
             // PendingIntent identity ignores extras. Update the stored expected
             // timestamp so a late broadcast from an older location is rejected.
@@ -108,10 +105,9 @@ object PrayerAlarms {
     fun scheduleWeek(context: Context, days: List<PrayerSchedulePayload.Schedule>, enabled: Boolean) {
         val manager = context.getSystemService(AlarmManager::class.java)
         for (day in days) {
-            val zone = ZoneId.of(day.timezone)
             prayers.forEachIndexed { index, prayer ->
                 val time = LocalTime.parse(day.timings.getValue(prayer))
-                val at = ZonedDateTime.of(day.date, time, zone).toInstant().toEpochMilli()
+                val at = PrayerInstant.epochMillis(day.date, time.toString(), day.timezone)
                 val pending = weekPending(context, day.date, index, prayer, at)
                 manager.cancel(pending)
                 if (!enabled || at <= System.currentTimeMillis()) return@forEachIndexed
