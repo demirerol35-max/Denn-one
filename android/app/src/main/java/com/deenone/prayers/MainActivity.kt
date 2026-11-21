@@ -95,7 +95,7 @@ class MainActivity : Activity() {
                 }
                 override fun onPageFinished(view: WebView, url: String) {
                     if (::offlineNotice.isInitialized &&
-                        url.startsWith("https://demirerol35-max.github.io/Denn-one/") &&
+                        isTrustedPrayerPage() &&
                         !mainPageFailed) {
                         offlineNotice.visibility = View.GONE
                     }
