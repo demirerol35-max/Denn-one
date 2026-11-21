@@ -26,6 +26,7 @@ import android.widget.TextView
 class MainActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var offlineNotice: View
+    private var mainPageFailed = false
     private var pendingLocation: Pair<String, GeolocationPermissions.Callback>? = null
     private val locationRequestCode = 1401
 
@@ -57,17 +58,21 @@ class MainActivity : Activity() {
                 }
             }
             webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                    mainPageFailed = false
+                }
                 override fun onReceivedError(
                     view: WebView, request: WebResourceRequest, error: WebResourceError
                 ) {
                     if (request.isForMainFrame && ::offlineNotice.isInitialized) {
+                        mainPageFailed = true
                         offlineNotice.visibility = View.VISIBLE
                     }
                 }
                 override fun onPageFinished(view: WebView, url: String) {
                     if (::offlineNotice.isInitialized &&
                         url.startsWith("https://demirerol35-max.github.io/Denn-one/") &&
-                        view.title != "Web page not available") {
+                        !mainPageFailed) {
                         offlineNotice.visibility = View.GONE
                     }
                 }
