@@ -6,13 +6,13 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
 
-function setup(now = Date.now()) {
+function setup(now = Date.now(), lookupFails = false) {
   const handlers = {};
   const shown = [];
   const existing = [];
   const registration = {
     scope: 'https://example.org/app/',
-    getNotifications: async () => existing,
+    getNotifications: async () => { if (lookupFails) throw new Error('temporary lookup failure'); return existing; },
     showNotification: async (title, options) => { shown.push({ title, options }); }
   };
   const context = {
@@ -113,4 +113,11 @@ test('notification tag uniquely identifies prayer and scheduled time', async () 
   assert.equal(app.shown.length, 2);
   assert.notEqual(app.shown[0].options.tag, app.shown[1].options.tag);
   assert.equal(app.shown[0].options.timestamp, now);
+});
+
+test('temporary notification lookup failure does not suppress prayer reminder', async () => {
+  const now = Date.now();
+  const app = setup(now, true);
+  await app.push({ type: 'prayer', prayer: 'Fajr', lang: 'fr', scheduledAt: now });
+  assert.equal(app.shown.length, 1);
 });
