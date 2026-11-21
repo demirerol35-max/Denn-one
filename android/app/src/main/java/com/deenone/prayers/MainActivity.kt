@@ -252,11 +252,18 @@ class MainActivity : Activity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == notificationRequestCode) {
-            if (notificationConsentPending &&
-                grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
-                PrayerAlarms.notificationsAllowed(this)) {
-                PrayerScheduleCoordinator.setEnabled(this, true)
-                offerExactAlarmPermission()
+            if (notificationConsentPending) {
+                if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED &&
+                    PrayerAlarms.notificationsAllowed(this)) {
+                    PrayerScheduleCoordinator.setEnabled(this, true)
+                    offerExactAlarmPermission()
+                } else {
+                    AlertDialog.Builder(this)
+                        .setTitle("Notifications non autorisées")
+                        .setMessage("Les rappels de prière restent désactivés. Tu pourras autoriser les notifications de Deen One dans les paramètres Android.")
+                        .setPositiveButton("Compris", null)
+                        .show()
+                }
             }
             refreshReminderStatusInWebView()
             notificationConsentPending = false
