@@ -10,7 +10,7 @@
         android:label="Deen One"
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@android:style/Theme.Material.NoActionBar">
         <activity android:name="com.deenone.prayers.MainActivity"
             android:exported="true">
             <intent-filter>
