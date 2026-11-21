@@ -17,7 +17,8 @@ object PrayerSchedulePayload {
     )
 
     private val names = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
-    private val clock = Regex("^([01]\\d|2[0-3]):[0-5]\\d$")
+    // Accept plain HH:mm or an API timezone suffix, never arbitrary trailing text.
+    private val clock = Regex("^(([01]\\d|2[0-3]):[0-5]\\d)(?: \\([^()]*\\))?$")
 
     fun parse(json: String): Schedule? = runCatching {
         val data = JSONObject(json)
@@ -26,8 +27,9 @@ object PrayerSchedulePayload {
         ZoneId.of(timezone) // reject invalid timezone before scheduling
         val raw = data.getJSONObject("timings")
         val timings = names.associateWith { prayer ->
-            val value = raw.getString(prayer).trim().substringBefore(' ')
-            require(clock.matches(value)) { "Invalid time for $prayer" }
+            val rawTime = raw.getString(prayer).trim()
+            val value = clock.matchEntire(rawTime)?.groupValues?.get(1)
+                ?: error("Invalid time for $prayer")
             LocalTime.parse(value)
             value
         }
