@@ -5,7 +5,7 @@ import {EDITIONS,validateMushafManifest,nextPage,verifyPageBytes} from '../musha
 
 const hash = data => createHash('sha256').update(data).digest('hex');
 const page = (edition,n) => ({number:n,image:`mushaf-assets/${edition}/page-${n}.webp`,sha256:hash(`page-${n}`)});
-const manifest = (edition,count) => ({edition,source:'Reviewed publisher',license:'Licensed for redistribution',reviewed:true,pages:Array.from({length:count},(_,i)=>page(edition,i+1))});
+const manifest = (edition,count) => ({version:1,edition,source:'Reviewed publisher',license:'Licensed for redistribution',reviewed:true,pages:Array.from({length:count},(_,i)=>page(edition,i+1))});
 
 test('Hafs requires 604 sequential pages',()=>{
  assert.equal(validateMushafManifest(manifest('hafs',604),'hafs').pages.length,604);
@@ -37,4 +37,12 @@ test('Navigation respects first and last page',()=>{
  assert.equal(nextPage(604,604,'next'),604);
  assert.equal(nextPage(5,604,'next'),6);
  assert.equal(nextPage(5,604,'previous'),4);
+});
+
+test('Reject unsupported manifest versions and invalid page controls',()=>{
+ const m=manifest('warsh',2);m.version=2;
+ assert.throws(()=>validateMushafManifest(m,'warsh'));
+ assert.throws(()=>nextPage(0,604,'next'));
+ assert.throws(()=>nextPage(1,604,'sideways'));
+ assert.throws(()=>nextPage(1,0,'next'));
 });
