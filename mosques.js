@@ -13,6 +13,7 @@
   let lastSearchAt = 0;
   let gpsPending = false;
   const cache = new Map();
+  let lastSuccessful = null;
 
   function message(value) { status.textContent = value; }
   function distanceKm(lat1, lon1, lat2, lon2) {
@@ -49,6 +50,7 @@
     }
     const places = [...unique.values()].sort((a,b)=>a.distance-b.distance).slice(0,30);
     if (!places.length) { message('Aucune mosquée trouvée dans ce rayon. Essaie un rayon plus grand.'); return; }
+    lastSuccessful = {data, lat, lon, at:Date.now()};
     message(places.length + ' mosquée(s) trouvée(s). Données OpenStreetMap, à vérifier avant de te déplacer.');
     for (const place of places) {
       const article = document.createElement('a');
@@ -81,11 +83,11 @@
     if (activeController) activeController.abort();
     const controller = new AbortController();
     activeController = controller;
-    results.replaceChildren();
+    if (!lastSuccessful) results.replaceChildren();
     const cacheKey=[lat.toFixed(2),lon.toFixed(2),radius.value].join(':');
     const saved=cache.get(cacheKey);
     if(saved && Date.now()-saved.at<15*60*1000){showPlaces(saved.data,lat,lon);activeController=null;return;}
-    message('Recherche des mosquées à proximité…');
+    message(lastSuccessful ? 'Actualisation des mosquées en cours…' : 'Recherche des mosquées à proximité…');
     const query = '[out:json][timeout:15];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + ');nwr["building"="mosque"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + '););out center;';
@@ -96,31 +98,32 @@
         'https://ovp.dresel.systems/api/interpreter',
         'https://overpass.private.coffee/api/interpreter'
       ];
-      for (const endpoint of endpoints) {
-        if(controller.signal.aborted) break;
+      // Query the independent endpoints concurrently; return the first valid
+      // result rather than waiting 8.5 seconds for each server in sequence.
+      const requests = endpoints.map(async endpoint => {
         const attempt = new AbortController();
         const abort = () => attempt.abort();
         controller.signal.addEventListener('abort',abort,{once:true});
-        const timeout = setTimeout(()=>attempt.abort(),8500);
+        const timeout = setTimeout(()=>attempt.abort(),6000);
         try {
           const response = await fetch(endpoint+'?data='+encodeURIComponent(query),{
             signal:attempt.signal,headers:{Accept:'application/json'}
           });
-          if(!response.ok) continue;
+          if(!response.ok) throw new Error('HTTP '+response.status);
           const candidate=await response.json();
-          if(Array.isArray(candidate.elements)){data=candidate;break;}
-        } catch (_) {
-          // Try the next provider; avoid one failed provider blocking the list.
+          if(!Array.isArray(candidate.elements)) throw new Error('Invalid response');
+          return candidate;
         } finally {
           clearTimeout(timeout);
           controller.signal.removeEventListener('abort',abort);
         }
-      }
+      });
+      try { data = await Promise.any(requests); } catch (_) { data = null; }
       if (!data) throw new Error('Aucun serveur disponible');
       if (activeController === controller) {cache.set(cacheKey,{at:Date.now(),data});showPlaces(data,lat,lon);}
     } catch (error) {
       if (activeController === controller)
-        { message('La liste est indisponible pour le moment. Tu peux réessayer.'); const link=document.createElement('a'); link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('mosquée près de '+lat+','+lon);link.target='_blank';link.rel='noopener noreferrer';link.textContent='🕌 Voir les mosquées sur Google Maps ↗';results.replaceChildren(link); }
+        { message(lastSuccessful ? 'Actualisation indisponible : dernière liste conservée.' : 'La liste est indisponible pour le moment. Tu peux réessayer.'); if (!lastSuccessful) { const link=document.createElement('a'); link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('mosquée près de '+lat+','+lon);link.target='_blank';link.rel='noopener noreferrer';link.textContent='🕌 Voir les mosquées sur Google Maps ↗';results.replaceChildren(link); } }
     } finally {
       if (activeController === controller) activeController = null;
     }
