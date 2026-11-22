@@ -83,6 +83,7 @@
     if (activeController) activeController.abort();
     const controller = new AbortController();
     activeController = controller;
+    if (lastSuccessful && distanceKm(lat,lon,lastSuccessful.lat,lastSuccessful.lon)>2) lastSuccessful=null;
     if (!lastSuccessful) results.replaceChildren();
     const cacheKey=[lat.toFixed(2),lon.toFixed(2),radius.value].join(':');
     const saved=cache.get(cacheKey);
