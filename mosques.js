@@ -262,10 +262,18 @@
       },()=>{suggestStatus.textContent='Localisation refusée ou indisponible. Colle un lien Maps ou une adresse.';},
       {enableHighAccuracy:true,timeout:12000});
     });
-    suggestSubmit.addEventListener('click',()=>{
+    suggestSubmit.addEventListener('click',async()=>{
       const name=suggestName.value.trim(),link=suggestLink.value.trim(),address=suggestAddress.value.trim();
       if(name.length<3 || (!link && !address)){
         suggestStatus.textContent='Indique le nom de la mosquée et au moins un emplacement ou une adresse.';return;
+      }
+      if(window.deenCloud?.suggest){
+        suggestStatus.textContent='Envoi de la proposition…';
+        try{const submitted=await window.deenCloud.suggest(name,link||address,address);
+          if(submitted.ok){suggestStatus.textContent='Proposition reçue ! Elle sera examinée avant publication.';suggestLink.value='';suggestName.value='';suggestAddress.value='';return;}
+          suggestStatus.textContent=submitted.error||'Envoi impossible.';
+        }catch(_){suggestStatus.textContent='Envoi impossible pour le moment.';}
+        return;
       }
       const body=['Proposition de mosquée pour Deen One','','Nom : '+name,
         'Emplacement / lien : '+(link||'Non fourni'),'Adresse / ville : '+(address||'Non fournie'),
