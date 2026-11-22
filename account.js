@@ -10,6 +10,7 @@
  const reset=root.querySelector('#deen-account-reset');
  const toggle=root.querySelector('#deen-account-password-toggle');
  if(toggle)toggle.addEventListener('click',()=>{const visible=password.type==='password';password.type=visible?'text':'password';toggle.textContent=visible?'Masquer le mot de passe':'Afficher le mot de passe';toggle.setAttribute('aria-pressed',String(visible));});
+ let recovering=false;
  const cloudConfigured=!!(SUPABASE_URL&&SUPABASE_PUBLISHABLE_KEY);
  let client=null,user=null;
  const show=(msg)=>{status.textContent=msg;};
@@ -20,10 +21,10 @@
    client=sdk.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
    const {data}=await client.auth.getSession();
    user=data.session?.user||null;render();
-   client.auth.onAuthStateChange((_event,session)=>{const previous=user?.id;user=session?.user||null;if(previous && previous!==user?.id){try{localStorage.removeItem('deen-one-local-profile-v1');}catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));}render();});
+   client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;password.disabled=false;password.value='';show('Choisis un nouveau mot de passe (8 caractères minimum), puis confirme.');}const previous=user?.id;user=session?.user||null;if(previous && previous!==user?.id){try{localStorage.removeItem('deen-one-local-profile-v1');}catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));}render();});
   }catch(_){show('Connexion au service de comptes indisponible.');}
  }
- function render(){signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
+ function render(){if(recovering){signOut.hidden=false;signIn.hidden=true;signUp.hidden=true;if(google)google.hidden=true;if(reset){reset.hidden=false;reset.textContent='Confirmer le nouveau mot de passe';}return;}signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
   show(user?'Connecté : '+user.email:'Connecte-toi ou crée un compte pour synchroniser ton profil.');
   if(user)syncName().catch(()=>show('Connecté, mais la synchronisation du profil est indisponible.'));
  }
@@ -55,7 +56,12 @@
   if(error)show('Connexion Google indisponible : '+error.message);
  });
  if(reset)reset.addEventListener('click',async()=>{
-  if(!client)return;const e=email.value.trim();if(!e.includes('@')){show('Indique ton adresse e-mail pour recevoir un lien de réinitialisation.');return;}
+  if(!client)return;
+  if(recovering){if(password.value.length<8){show('Le nouveau mot de passe doit contenir au moins 8 caractères.');return;}
+    const {error}=await client.auth.updateUser({password:password.value});
+    if(error){show('Modification impossible : '+error.message);return;}
+    password.value='';recovering=false;reset.textContent='Mot de passe oublié ?';render();show('Ton mot de passe a été modifié.');return;
+  }const e=email.value.trim();if(!e.includes('@')){show('Indique ton adresse e-mail pour recevoir un lien de réinitialisation.');return;}
   const {error}=await client.auth.resetPasswordForEmail(e,{redirectTo:window.location.origin+window.location.pathname});
   show(error?'Impossible de demander la réinitialisation pour le moment.':'Si cette adresse est enregistrée, un e-mail de réinitialisation sera envoyé.');
  });
