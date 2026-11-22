@@ -21,16 +21,6 @@ export function nextPage(page,total,direction){
  if(!Number.isInteger(total)||total<1)throw Error('Nombre de pages incorrect');
  return Math.min(total,Math.max(1,Math.trunc(page||1)+(direction==='next'?1:-1)));
 }
-,'i').test(page.image)||typeof page.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(page.sha256)||seen.has(page.image))throw Error('Page non vérifiée : '+(index+1));
-  seen.add(page.image);
- });
- return Object.freeze({edition,source:manifest.source,license:manifest.license,pages:manifest.pages.map(p=>Object.freeze({...p}))});
-}
-export function nextPage(page,total,direction){
- if(!Number.isInteger(total)||total<1)throw Error('Nombre de pages incorrect');
- return Math.min(total,Math.max(1,Math.trunc(page||1)+(direction==='next'?1:-1)));
-}
-
 // SHA-256 validation checks actual page bytes, not merely the manifest's claimed hash.
 export async function verifyPageBytes(bytes,expectedSha256){
  if(typeof expectedSha256!=='string'||!/^[a-f0-9]{64}$/i.test(expectedSha256))return false;
