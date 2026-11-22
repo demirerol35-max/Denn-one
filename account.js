@@ -94,7 +94,9 @@
  if(google)google.addEventListener('click',async()=>{
   if(!client)return;
   show('Ouverture de la connexion Google…');
-  const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname,skipBrowserRedirect:false}});
+  const inAndroidApp=/DeenOneAndroid\\/1/.test(navigator.userAgent);
+  const redirectTo=inAndroidApp?'deenone://auth/callback':window.location.origin+window.location.pathname;
+  const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo,skipBrowserRedirect:false}});
   if(error)show('Connexion Google indisponible : '+error.message);
  });
  if(reset)reset.addEventListener('click',async()=>{
