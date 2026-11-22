@@ -34,6 +34,22 @@ export async function verifyPageBytes(bytes,expectedSha256){
 }
 
 
+export function mushafSpread(page,total,doublePage=false){
+ nextPage(page,total,'next');
+ if(typeof doublePage!=='boolean')throw Error('Présentation incorrecte');
+ if(!doublePage)return [page];
+ const start=page%2===0?page-1:page;
+ return start<total?[start,start+1]:[start];
+}
+export function turnMushafSpread(page,total,direction,doublePage=false){
+ const pages=mushafSpread(page,total,doublePage);
+ const single=nextPage(page,total,direction);
+ if(!doublePage)return single;
+ const lastStart=total%2===0?total-1:total;
+ const target=direction==='next'?Math.min(lastStart,pages[0]+2):Math.max(1,pages[0]-2);
+ return target===pages[0]?page:target;
+}
+
 // Keep verified Mushaf content separate from the service worker's application shell.
 const MANIFEST_CACHE='deen-mushaf-manifests-v1';
 const PAGE_CACHE='deen-mushaf-pages-v1';

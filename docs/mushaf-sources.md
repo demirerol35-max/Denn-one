@@ -53,3 +53,19 @@ Les manifestes générés portent obligatoirement `reviewed: false` et `reviewSt
 Les tests automatisés vérifient aussi une préparation complète de 604 pages synthétiques, le rejet des sources modifiées et l’impossibilité d’activer un manifeste non revu. Les pages réelles 1 et 300 des deux éditions ont été converties localement et examinées visuellement ; cette vérification ponctuelle ne vaut pas revue complète des 1 208 pages.
 
 
+## Présentation du lecteur en livre
+
+Le lecteur de production prend désormais en charge une page ou une double page, avec un choix automatique : deux pages à partir de 900 pixels de largeur, une page en dessous. Le choix manuel est conservé sur l’appareil.
+
+Les paires sont présentées dans l’ordre de lecture droite à gauche : page 1 à droite et page 2 à gauche, puis 3–4, etc. Un accès direct à une page paire conserve cette page comme position de lecture ; passer ensuite en présentation simple affiche bien la page demandée.
+
+Le zoom va de 100 à 200 %, avec un bouton Ajuster. Quand le zoom dépasse 100 %, les gestes horizontaux et les flèches du clavier laissent déplacer la page sans déclencher un changement de page. Les boutons de navigation restent utilisables. Chaque ouverture d’édition et chaque changement de présentation revient à 100 %.
+
+En double page, les deux images sont chargées et vérifiées avant affichage. Si l’une échoue, aucune des deux n’est affichée et la position de lecture n’est pas enregistrée. Le changement de présentation annule les chargements précédents.
+
+La suite navigateur `tests/mushaf-book.spec.cjs` vérifie la disposition RTL, les pixels réellement peints, les limites de navigation, le passage au format mobile, le zoom et le rejet d’une seconde page corrompue. Des essais locaux de rendu utilisent également les pages sources réelles 1 et 2 de Hafs et Warsh. Ces essais portent sur l’interface et ne valident pas éditorialement l’ensemble des pages. Les artefacts de contrôle existants conservent leur visionneuse simple ; les fonctions de livre décrites ici concernent le lecteur de l’application.
+
+Aucune édition n’est activée automatiquement par cette évolution.
+
+
+

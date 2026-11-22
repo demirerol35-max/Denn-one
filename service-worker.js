@@ -1,7 +1,7 @@
 // Deen One: cache only the static application shell, never user/API data.
-const CACHE = 'deen-one-shell-v15';
-const SHELL = ['./', './index.html', './vision.html', './manifest.webmanifest', './deen-one-icon.svg', './mosques.js', './mushaf.mjs'];
-const SHELL_URLS = new Set(SHELL.map(path => new URL(path, self.registration.scope).pathname));
+const CACHE = 'deen-one-shell-v16';
+const SHELL = ['./', './index.html', './vision.html', './manifest.webmanifest', './deen-one-icon.svg', './mosques.js', './mushaf.mjs', './mushaf.mjs?v=book-20261122'];
+const SHELL_URLS = new Set(SHELL.map(path => { const url = new URL(path, self.registration.scope); return url.pathname + url.search; }));
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(async cache => {
     // A single missing optional asset must not prevent the app shell from installing.
@@ -25,10 +25,10 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin || !SHELL_URLS.has(url.pathname)) return;
-  // Avoid persisting query strings, including any potential private parameters.
-  if (url.search) return;
-  const key = new Request(url.origin + url.pathname);
+  // Only exact public shell URLs are cached, including the fixed module revision.
+  // Arbitrary query strings (and any private parameters) remain outside the cache.
+  if (url.origin !== self.location.origin || !SHELL_URLS.has(url.pathname + url.search)) return;
+  const key = new Request(url.origin + url.pathname + url.search);
   event.respondWith(fetch(request).then(response => {
     if (response.ok && response.type === 'basic') {
       const copy = response.clone();

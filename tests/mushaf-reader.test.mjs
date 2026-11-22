@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {mushafSpread,turnMushafSpread} from '../mushaf.mjs';
 const html=readFileSync(new URL('../vision.html',import.meta.url),'utf8');
 const functionSource=name=>{const start=html.indexOf('function '+name+'(');assert.ok(start>=0);const end=html.indexOf('\n}',start);return html.slice(start,end+2)};
 function reader(){
  const nodes=new Map();
  const get=id=>{if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:''});return nodes.get(id)};
- const context={document:{getElementById:get},mushafReader:{hidden:false},mushafPages:Array(604),mushafPageReady:true,mushafCurrentPage:1,mushafMsg:{textContent:''},renders:0,renderVerifiedMushaf(){context.renders++}};
+ const context={document:{getElementById:get},mushafReader:{hidden:false},mushafPages:Array(604),mushafPageReady:true,mushafCurrentPage:1,mushafIsDouble:()=>false,mushafModule:{mushafSpread,turnMushafSpread},mushafMsg:{textContent:''},renders:0,renderVerifiedMushaf(){context.renders++}};
  vm.createContext(context);
  vm.runInContext(functionSource('jumpMushafPage')+'\n'+functionSource('turnMushafPage'),context);
  return {context,get};
@@ -31,7 +32,7 @@ function deferred(){let resolve,reject;const promise=new Promise((yes,no)=>{reso
 function ui(moduleOverrides={}){
  const nodes=new Map(),saved=new Map(),revoked=[];
  const get=id=>{
-  if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:'',attributes:{},listeners:{},
+  if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:'',style:{},attributes:{},listeners:{},
    addEventListener(type,handler){this.listeners[type]=handler},
    setAttribute(name,value){this.attributes[name]=value},
    removeAttribute(name){delete this[name]},
@@ -40,7 +41,7 @@ function ui(moduleOverrides={}){
   return nodes.get(id);
  };
  const fixture=edition=>({pages:[{number:1,image:'mushaf-assets/'+edition+'/1.webp'}]});
- const module={EDITIONS:{hafs:{label:'Hafs'},warsh:{label:'Warsh'}},
+ const module={mushafSpread,turnMushafSpread,EDITIONS:{hafs:{label:'Hafs'},warsh:{label:'Warsh'}},
   loadMushafManifest:async edition=>({manifest:fixture(edition)}),
   loadVerifiedMushafPage:async()=>({bytes:new Uint8Array([1]),fromCache:false}),...moduleOverrides};
  const c={document:{getElementById:get},AbortController,Blob,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)},
@@ -48,7 +49,7 @@ function ui(moduleOverrides={}){
  vm.createContext(c);
  const start=html.indexOf("const mushafMsg=document.getElementById('mushaf-reader-message')");
  const end=html.indexOf('// Navigation Mushaf :',start);
- vm.runInContext(html.slice(start,end).replaceAll("await import('./mushaf.mjs')","await loadModule()"),c);
+ vm.runInContext(html.slice(start,end).replaceAll("await import('./mushaf.mjs?v=book-20261122')","await loadModule()"),c);
  return {c,get,saved,revoked,module};
 }
 test('switching edition cancels the previous manifest and ignores its late result',async()=>{
@@ -87,5 +88,45 @@ test('an undecodable image releases its URL and can be retried',async()=>{
  assert.equal(get('mushaf-retry').hidden,true);
  assert.equal(saved.get('deen-mushaf-page-hafs'),'1');
 });
+
+test('double-page spreads preserve the requested even page and stay bounded',()=>{
+ assert.deepEqual(mushafSpread(1,604,true),[1,2]);
+ assert.deepEqual(mushafSpread(300,604,true),[299,300]);
+ assert.deepEqual(mushafSpread(604,604,true),[603,604]);
+ assert.deepEqual(mushafSpread(5,5,true),[5]);
+ assert.deepEqual(mushafSpread(300,604,false),[300]);
+ assert.equal(turnMushafSpread(300,604,'next',true),301);
+ assert.equal(turnMushafSpread(300,604,'previous',true),297);
+ assert.equal(turnMushafSpread(604,604,'next',true),604);
+ assert.equal(turnMushafSpread(1,604,'previous',true),1);
+ for(const args of [[0,604,true],[1,0,true],[1,604,'double']])assert.throws(()=>mushafSpread(...args));
+});
+test('a double-page load fails as a unit when one page fails verification',async()=>{
+ const {c,get,saved}=ui({
+  loadMushafManifest:async()=>({manifest:{pages:[{number:1,image:'mushaf-assets/hafs/1.webp'},{number:2,image:'mushaf-assets/hafs/2.webp'}]}}),
+  loadVerifiedMushafPage:async page=>{if(page.number===2)throw Error('Hash mismatch');return {bytes:new Uint8Array([1]),fromCache:false}}
+ });
+ get('mushaf-layout').value='double';get('mushaf-layout').listeners.change({target:get('mushaf-layout')});
+ await c.openVerifiedMushaf('hafs');
+ assert.equal(get('mushaf-retry').hidden,false);assert.equal(saved.has('deen-mushaf-page-hafs'),false);
+ assert.equal(get('mushaf-page-image').src,undefined);assert.equal(get('mushaf-page-image-second').src,undefined);
+});
+test('both verified pages appear together and zoom is bounded',async()=>{
+ const {c,get,saved}=ui({
+  loadMushafManifest:async()=>({manifest:{pages:[{number:1,image:'mushaf-assets/hafs/1.webp'},{number:2,image:'mushaf-assets/hafs/2.webp'}]}})
+ });
+ get('mushaf-layout').value='double';get('mushaf-layout').listeners.change({target:get('mushaf-layout')});
+ await c.openVerifiedMushaf('hafs');
+ assert.equal(get('mushaf-page-image').alt,'Hafs · page 1');
+ assert.equal(get('mushaf-page-image-second').alt,'Hafs · page 2');
+ assert.equal(get('mushaf-counter').textContent,'Pages 1–2 / 2');
+ assert.equal(get('mushaf-reader').attributes['aria-busy'],'false');
+ assert.equal(saved.get('deen-mushaf-page-hafs'),'1');
+ for(let n=0;n<10;n++)get('mushaf-zoom-in').listeners.click();
+ assert.equal(get('mushaf-page-spread').style.width,'200%');assert.equal(get('mushaf-zoom-in').disabled,true);
+ get('mushaf-zoom-reset').listeners.click();
+ assert.equal(get('mushaf-page-spread').style.width,'100%');assert.equal(get('mushaf-zoom-out').disabled,true);
+});
+
 
 

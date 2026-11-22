@@ -89,7 +89,7 @@ test('installed service worker serves the reader module offline and preserves ve
  const moduleBody=readFileSync(new URL('../mushaf.mjs',import.meta.url),'utf8');
  cacheStorage.open=async name=>{
   const cache=await open(name);
-  cache.add=async key=>cache.put(key,new Response(key==='./mushaf.mjs'?moduleBody:'shell'));
+  cache.add=async key=>cache.put(key,new Response(key.startsWith('./mushaf.mjs')?moduleBody:'shell'));
   return cache;
  };
  cacheStorage.keys=async()=>[...cacheStorage.stores.keys()];
@@ -112,8 +112,11 @@ test('installed service worker serves the reader module offline and preserves ve
  assert.equal(cacheStorage.stores.has('deen-mushaf-pages-v1'),true);
  assert.equal(cacheStorage.stores.has('deen-mushaf-manifests-v1'),true);
  let response;
- handlers.fetch({request:new Request('https://example.org/app/mushaf.mjs'),respondWith:p=>{response=p},waitUntil:()=>{}});
+ handlers.fetch({request:new Request('https://example.org/app/mushaf.mjs?v=book-20261122'),respondWith:p=>{response=p},waitUntil:()=>{}});
  assert.equal(await (await response).text(),moduleBody);
+ let intercepted=false;
+ handlers.fetch({request:new Request('https://example.org/app/mushaf.mjs?v=book-20261122&token=private'),respondWith:()=>{intercepted=true},waitUntil:()=>{}});
+ assert.equal(intercepted,false,'Private query parameters must not enter the application cache');
 });
 
 test('deadline includes a stalled response body',async()=>{
