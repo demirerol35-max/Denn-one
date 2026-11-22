@@ -1,0 +1,23 @@
+// Deen One — guarded Mushaf edition loader. No fabricated pages or substituted riwaya.
+export const EDITIONS=Object.freeze({
+ hafs:{label:"Hafs d'après ‘Âsim",expectedPages:604},
+ warsh:{label:"Warsh d'après Nâfi‘",expectedPages:null}
+});
+export function validateMushafManifest(manifest,edition){
+ if(!Object.hasOwn(EDITIONS,edition))throw Error('Édition inconnue');
+ if(!manifest||manifest.edition!==edition)throw Error('Édition du fichier incorrecte');
+ if(typeof manifest.source!=='string'||!manifest.source.trim()||typeof manifest.license!=='string'||!manifest.license.trim()||manifest.reviewed!==true)throw Error('Source, droits et validation éditoriale obligatoires');
+ if(!Array.isArray(manifest.pages)||!manifest.pages.length)throw Error('Pages manquantes');
+ const expected=EDITIONS[edition].expectedPages;
+ if(expected!==null&&manifest.pages.length!==expected)throw Error('Pagination Hafs incorrecte');
+ const seen=new Set();
+ manifest.pages.forEach((page,index)=>{
+  if(!page||page.number!==index+1||!Number.isInteger(page.number)||typeof page.image!=='string'||!/^mushaf-assets\/[a-z0-9/_-]+\.(png|webp|jpg)$/i.test(page.image)||typeof page.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(page.sha256)||seen.has(page.image))throw Error('Page non vérifiée : '+(index+1));
+  seen.add(page.image);
+ });
+ return Object.freeze({edition,source:manifest.source,license:manifest.license,pages:manifest.pages.map(p=>Object.freeze({...p}))});
+}
+export function nextPage(page,total,direction){
+ if(!Number.isInteger(total)||total<1)throw Error('Nombre de pages incorrect');
+ return Math.min(total,Math.max(1,Math.trunc(page||1)+(direction==='next'?1:-1)));
+}
