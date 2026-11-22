@@ -1,5 +1,5 @@
 // Deen One: cache only the static application shell, never user/API data.
-const CACHE = 'deen-one-shell-v12';
+const CACHE = 'deen-one-shell-v13';
 const SHELL = ['./', './index.html', './vision.html', './manifest.webmanifest', './deen-one-icon.svg', './mosques.js'];
 const SHELL_URLS = new Set(SHELL.map(path => new URL(path, self.registration.scope).pathname));
 self.addEventListener('install', event => {
