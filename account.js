@@ -7,10 +7,13 @@
  const status=root.querySelector('#deen-account-status');
  const google=root.querySelector('#deen-account-google');
  const signIn=root.querySelector('#deen-account-signin'),signUp=root.querySelector('#deen-account-signup'),signOut=root.querySelector('#deen-account-signout');
+ const reset=root.querySelector('#deen-account-reset');
+ const toggle=root.querySelector('#deen-account-password-toggle');
+ if(toggle)toggle.addEventListener('click',()=>{const visible=password.type==='password';password.type=visible?'text':'password';toggle.textContent=visible?'Masquer le mot de passe':'Afficher le mot de passe';toggle.setAttribute('aria-pressed',String(visible));});
  const cloudConfigured=!!(SUPABASE_URL&&SUPABASE_PUBLISHABLE_KEY);
  let client=null,user=null;
  const show=(msg)=>{status.textContent=msg;};
- if(!cloudConfigured){show('Compte synchronisé en préparation. Ton prénom reste enregistré sur cet appareil.');signIn.disabled=true;signUp.disabled=true;if(google)google.disabled=true;signOut.hidden=true;return;}
+ if(!cloudConfigured){show('Compte synchronisé en préparation. Ton prénom reste enregistré sur cet appareil.');signIn.disabled=true;signUp.disabled=true;if(google)google.disabled=true;if(reset)reset.disabled=true;email.disabled=true;password.disabled=true;signOut.hidden=true;return;}
  async function init(){
   try{
    const sdk=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
@@ -20,7 +23,7 @@
    client.auth.onAuthStateChange((_event,session)=>{const previous=user?.id;user=session?.user||null;if(previous && previous!==user?.id){try{localStorage.removeItem('deen-one-local-profile-v1');}catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));}render();});
   }catch(_){show('Connexion au service de comptes indisponible.');}
  }
- function render(){signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;if(google)google.hidden=!!user;
+ function render(){signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
   show(user?'Connecté : '+user.email:'Connecte-toi ou crée un compte pour synchroniser ton profil.');
   if(user)syncName().catch(()=>show('Connecté, mais la synchronisation du profil est indisponible.'));
  }
@@ -50,6 +53,11 @@
   show('Ouverture de la connexion Google…');
   const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname}});
   if(error)show('Connexion Google indisponible : '+error.message);
+ });
+ if(reset)reset.addEventListener('click',async()=>{
+  if(!client)return;const e=email.value.trim();if(!e.includes('@')){show('Indique ton adresse e-mail pour recevoir un lien de réinitialisation.');return;}
+  const {error}=await client.auth.resetPasswordForEmail(e,{redirectTo:window.location.origin+window.location.pathname});
+  show(error?'Impossible de demander la réinitialisation pour le moment.':'Si cette adresse est enregistrée, un e-mail de réinitialisation sera envoyé.');
  });
  signIn.addEventListener('click',()=>authenticate(false));
  signUp.addEventListener('click',()=>authenticate(true));
