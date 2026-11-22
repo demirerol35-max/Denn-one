@@ -808,6 +808,34 @@ document.getElementById('mushaf-next').addEventListener('click',()=>{if(mushafCu
 document.getElementById('mushaf-close').addEventListener('click',()=>{++mushafRequest;clearMushafImage();mushafReader.hidden=true;if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})});
 document.getElementById('mushaf-fullscreen').addEventListener('click',()=>{if(mushafReader.requestFullscreen)mushafReader.requestFullscreen().catch(()=>{mushafMsg.textContent='Plein écran indisponible sur cet appareil.'})});
 mushafImage.addEventListener('error',()=>{clearMushafImage();mushafMsg.textContent='Image de page indisponible.'});
+// Navigation Mushaf : geste horizontal sur la page, et touches gauche/droite si le lecteur est ouvert.
+const mushafSurface=document.getElementById('mushaf-page-surface');
+let mushafTouchStart=null;
+function turnMushafPage(direction){
+ if(mushafReader.hidden||!mushafPages.length)return;
+ const candidate=mushafCurrentPage+(direction==='next'?1:-1);
+ if(candidate<1||candidate>mushafPages.length)return;
+ mushafCurrentPage=candidate;renderVerifiedMushaf();
+}
+mushafSurface.addEventListener('touchstart',event=>{
+ if(event.touches.length!==1){mushafTouchStart=null;return}
+ mushafTouchStart={x:event.touches[0].clientX,y:event.touches[0].clientY};
+},{passive:true});
+mushafSurface.addEventListener('touchend',event=>{
+ if(!mushafTouchStart||!event.changedTouches.length)return;
+ const dx=event.changedTouches[0].clientX-mushafTouchStart.x;
+ const dy=event.changedTouches[0].clientY-mushafTouchStart.y;
+ mushafTouchStart=null;
+ if(Math.abs(dx)<65||Math.abs(dx)<Math.abs(dy)*1.5)return;
+ turnMushafPage(dx<0?'next':'previous');
+},{passive:true});
+document.addEventListener('keydown',event=>{
+ if(mushafReader.hidden||event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight'].includes(event.key))return;
+ const target=event.target;
+ if(target?.closest?.('input,textarea,select,[contenteditable="true"]'))return;
+ event.preventDefault();turnMushafPage(event.key==='ArrowLeft'?'next':'previous');
+});
+
 const quranViewSelect=document.getElementById('quran-view-mode'),bookControls=document.getElementById('quran-book-controls'),bookPageLabel=document.getElementById('quran-book-page'),bookNote=document.getElementById('quran-book-note');let bookPage=0;const bookSize=5;let quranView='list';try{quranView='list'}catch(e){}quranViewSelect.value=quranView;
 function updateBookView(){
  const cards=[...container.querySelectorAll('.quran-ayah')],pages=Math.max(1,Math.ceil(cards.length/bookSize));
