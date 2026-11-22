@@ -22,6 +22,10 @@
       '&mlon=' + encodeURIComponent(lon) + '#map=17/' +
       encodeURIComponent(lat) + '/' + encodeURIComponent(lon);
   }
+  function directionsUrl(lat, lon) {
+    return 'https://www.google.com/maps/dir/?api=1&destination=' +
+      encodeURIComponent(lat + ',' + lon);
+  }
   function showPlaces(data, lat, lon) {
     results.replaceChildren();
     const unique = new Map();
@@ -53,8 +57,14 @@
       link.href = mapsUrl(place.lat, place.lon);
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.textContent = 'Itinéraire / carte ↗';
-      article.append(heading, details, link);
+      link.textContent = 'Voir sur la carte ↗';
+      const directions = document.createElement('a');
+      directions.href = directionsUrl(place.lat, place.lon);
+      directions.target = '_blank';
+      directions.rel = 'noopener noreferrer';
+      directions.textContent = 'Itinéraire ↗';
+      directions.style.marginLeft = '16px';
+      article.append(heading, details, link, directions);
       results.append(article);
     }
   }
