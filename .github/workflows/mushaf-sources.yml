@@ -1,0 +1,70 @@
+name: Prepare Hafs and Warsh review pages
+on:
+  push:
+    paths:
+      - 'scripts/prepare-mushaf.mjs'
+      - 'data/mushaf-source-lock.json'
+      - 'tests/mushaf-source.test.mjs'
+      - '.github/workflows/mushaf-sources.yml'
+  pull_request:
+    paths:
+      - 'scripts/prepare-mushaf.mjs'
+      - 'data/mushaf-source-lock.json'
+      - 'tests/mushaf-source.test.mjs'
+      - '.github/workflows/mushaf-sources.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [hafs, warsh]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: app
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned image and XML dependencies
+        working-directory: app
+        run: npm install --no-save --package-lock=false --ignore-scripts sharp@0.35.5 sax@1.6.1
+      - name: Test source preparation and draft safeguards
+        working-directory: app
+        run: node --test tests/mushaf-source.test.mjs
+      - name: Read pinned source revision
+        id: source
+        working-directory: app
+        run: node -e "console.log('commit='+require('./data/mushaf-source-lock.json').commit)" >> "$GITHUB_OUTPUT"
+      - name: Check out only source pages and notices
+        uses: actions/checkout@v4
+        with:
+          repository: quran-ws/quran-svg
+          ref: ${{ steps.source.outputs.commit }}
+          path: source
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /mushafs/${{ matrix.edition }}/kfqc/svg/*.svg
+            /LICENSE
+            /NOTICE.md
+            /LICENSES/CC-BY-4.0.txt
+      - name: Render all 604 pages with locked source hashes
+        working-directory: app
+        run: node scripts/prepare-mushaf.mjs ../source ../review-${{ matrix.edition }} ${{ matrix.edition }}
+      - name: Upload review pages and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: deen-one-${{ matrix.edition }}-review
+          path: review-${{ matrix.edition }}/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Report preparation status
+        run: |
+          echo "## ${{ matrix.edition }}: 604 pages prepared for review" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download and extract the review artifact, then open review.html. Source hashes are pinned; editorial review remains pending. No pages are activated in the application." >> "$GITHUB_STEP_SUMMARY"
+

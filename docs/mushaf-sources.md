@@ -39,3 +39,17 @@ Les tests couvrent le schéma, la séparation des éditions, les limites de navi
 
 Ces vérifications ne remplacent pas une revue éditoriale ni un essai sur téléphone réel.
 
+
+## Préparation automatisée des pages pour contrôle
+
+La chaîne `.github/workflows/mushaf-sources.yml` prépare séparément les éditions Hafs et Warsh, à partir du commit source figé `3ff27b46cecb0c0519d77531d9c868a579d1f623` (v1.1.1).
+
+Le fichier `data/mushaf-source-lock.json` inventorie les 604 pages de chaque édition avec leur taille et leur empreinte Git. Le préparateur vérifie les octets sources, refuse les fichiers manquants et les références actives ou externes dans les SVG, puis produit des PNG de 1 400 pixels de large en conservant le viewBox complet. Il calcule une empreinte SHA-256 pour chaque source et chaque image produite et conserve les notices et licences d’origine.
+
+Chaque artefact GitHub `deen-one-hafs-review` ou `deen-one-warsh-review` contient les pages, un manifeste, un rapport et une visionneuse `review.html`. Télécharger et extraire l’artefact, puis ouvrir cette page pour parcourir les images. Le préparateur refuse d’écraser un dossier existant.
+
+Les manifestes générés portent obligatoirement `reviewed: false` et `reviewStatus: "pending"`. Le lecteur de production les refuse. Le workflow ne modifie pas l’application et ne publie pas automatiquement les images sur GitHub Pages.
+
+Les tests automatisés vérifient aussi une préparation complète de 604 pages synthétiques, le rejet des sources modifiées et l’impossibilité d’activer un manifeste non revu. Les pages réelles 1 et 300 des deux éditions ont été converties localement et examinées visuellement ; cette vérification ponctuelle ne vaut pas revue complète des 1 208 pages.
+
+
