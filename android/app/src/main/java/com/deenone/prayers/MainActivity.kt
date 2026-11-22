@@ -240,12 +240,14 @@ class MainActivity : Activity() {
             PrayerAlarms.notificationsAllowed(this)) return
         val prefs = getSharedPreferences("deen_native_prayers", MODE_PRIVATE)
         if (prefs.getBoolean("notification_onboarding_shown", false)) return
-        prefs.edit().putBoolean("notification_onboarding_shown", true).apply()
         AlertDialog.Builder(this)
             .setTitle("Notifications des cinq prières")
             .setMessage("Veux-tu recevoir les rappels des cinq prières, même lorsque Deen One est fermée ? Android va te demander l'autorisation des notifications.")
-            .setNegativeButton("Plus tard", null)
+            .setNegativeButton("Plus tard") { _, _ ->
+                // Keep the onboarding available at the next launch if postponed.
+            }
             .setPositiveButton("Autoriser") { _, _ ->
+                prefs.edit().putBoolean("notification_onboarding_shown", true).apply()
                 notificationConsentPending = true
                 requestPermissions(
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
