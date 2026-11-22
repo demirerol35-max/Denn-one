@@ -48,6 +48,7 @@ class MainActivity : Activity() {
         PrayerAlarms.ensureChannel(this)
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
+            settings.userAgentString = settings.userAgentString + " DeenOneAndroid/1"
             settings.domStorageEnabled = true
             settings.allowFileAccess = false
             settings.allowContentAccess = false
