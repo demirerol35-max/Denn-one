@@ -1,6 +1,6 @@
 /* Deen One — nearby mosques, OpenStreetMap data. Opening the dedicated section initiates a GPS request. */
 (() => {
-  const root = document.getElementById('mosques');
+  // Set to the deployed HTTPS Cloudflare Worker URL; empty keeps OpenStreetMap only.\n  const GOOGLE_PLACES_ENDPOINT = '';\n  const root = document.getElementById('mosques');
   if (!root) return;
   const status = root.querySelector('#mosque-status');
   const results = root.querySelector('#mosque-results');
@@ -36,10 +36,10 @@
     return 'https://www.google.com/maps/dir/?api=1&destination=' +
       encodeURIComponent(lat + ',' + lon);
   }
-  function showPlaces(data, lat, lon) {
+  function showPlaces(data, lat, lon, source = 'osm') {
     results.replaceChildren();
     const unique = new Map();
-    for (const item of data.elements || []) {
+    for (const item of (source === 'google' ? (data.places || []).map(p => ({lat:p.lat,lon:p.lon,tags:{name:p.name,'addr:full':p.address}})) : data.elements || [])) {
       const pLat = item.lat ?? item.center?.lat, pLon = item.lon ?? item.center?.lon;
       if (!Number.isFinite(pLat) || !Number.isFinite(pLon)) continue;
       const tags = item.tags || {};
@@ -56,8 +56,8 @@
     }
     const places = [...unique.values()].sort((a,b)=>a.distance-b.distance).slice(0,30);
     if (!places.length) { message('Aucune mosquée trouvée dans ce rayon. Essaie un rayon plus grand.'); return; }
-    lastSuccessful = {data, lat, lon, at:Date.now()};
-    message(places.length + ' mosquée(s) trouvée(s). Données OpenStreetMap, à vérifier avant de te déplacer.');
+    if(source === 'osm') lastSuccessful = {data, lat, lon, at:Date.now()};
+    message(places.length + ' mosquée(s) trouvée(s). ' + (source === 'google' ? 'Données Google Places — Google Maps.' : 'Données OpenStreetMap, à vérifier avant de te déplacer.'));
     for (const place of places) {
       const article = document.createElement('a');
       article.className = 'card';
@@ -134,7 +134,7 @@
     if (lastSuccessful && distanceKm(lat,lon,lastSuccessful.lat,lastSuccessful.lon)>2) lastSuccessful=null;
     if (!lastSuccessful) results.replaceChildren();
     const cacheKey=[lat.toFixed(2),lon.toFixed(2),radius.value].join(':');
-    const saved=cache.get(cacheKey);
+    const saved=cache.get(cacheKey);\n    if(GOOGLE_PLACES_ENDPOINT){\n      try {\n        let client=localStorage.getItem('deen-mosques-client-id');\n        if(!client){client='anon_'+Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');localStorage.setItem('deen-mosques-client-id',client);}\n        const response=await fetch(GOOGLE_PLACES_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},\n          body:JSON.stringify({lat,lon,radius:Number(radius.value),client}),signal:controller.signal});\n        if(response.ok){const data=await response.json();\n          if(activeController!==controller)return;\n          if(Array.isArray(data.places)&&data.places.length){showPlaces(data,lat,lon,'google');activeController=null;return;}\n        }\n      }catch(_){if(controller.signal.aborted)return;}\n      // Quota exceeded, empty response, or provider offline: use OSM below.\n    }
     if(saved && Date.now()-saved.at<30*60*1000){showPlaces(saved.data,lat,lon);activeController=null;return;}
     if(!saved){for(const [key,v] of cache){if(key.startsWith(lat.toFixed(2)+':'+lon.toFixed(2)+':') && v.data && Date.now()-v.at<7*86400000){showPlaces(v.data,lat,lon);message('Dernière liste disponible. Actualisation en cours…');break;}}}
     if(saved) {showPlaces(saved.data,lat,lon);message('Dernière liste disponible. Actualisation en cours…');}
