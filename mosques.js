@@ -14,6 +14,7 @@
   let gpsPending = false;
   const cache = new Map();
   let lastSuccessful = null;
+  const addressCache = new Map();
 
   function message(value) { status.textContent = value; }
   function distanceKm(lat1, lon1, lat2, lon2) {
@@ -38,15 +39,16 @@
       const pLat = item.lat ?? item.center?.lat, pLon = item.lon ?? item.center?.lon;
       if (!Number.isFinite(pLat) || !Number.isFinite(pLon)) continue;
       const tags = item.tags || {};
-      const name = tags['name:fr'] || tags.name || 'Mosquée';
+      const name = tags['name:fr'] || tags.name || tags['name:tr'] || tags['official_name'] || tags['operator'] || 'Mosquée';
       const distance = distanceKm(lat, lon, pLat, pLon);
       if (distance > Number(radius.value)/1000) continue;
       const key = (name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'') + ':' + Math.round(pLat*10000) + ':' + Math.round(pLon*10000));
       const street = [tags['addr:housenumber'], tags['addr:street']].filter(Boolean).join(' ');
       const town = [tags['addr:postcode'], tags['addr:city'] || tags['addr:town'] || tags['addr:village']].filter(Boolean).join(' ');
       const address = [street, town].filter(Boolean).join(', ') ||
-        tags['addr:full'] || tags['contact:street'] || '';
-      unique.set(key, {name, distance, lat:pLat, lon:pLon, address});
+        tags['addr:full'] || tags['contact:street'] || tags['contact:address'] || '';
+      if (!unique.has(key) || (address && !unique.get(key).address))
+        unique.set(key, {name, distance, lat:pLat, lon:pLon, address});
     }
     const places = [...unique.values()].sort((a,b)=>a.distance-b.distance).slice(0,30);
     if (!places.length) { message('Aucune mosquée trouvée dans ce rayon. Essaie un rayon plus grand.'); return; }
@@ -65,7 +67,8 @@
       heading.textContent = place.name;
       const details = document.createElement('p');
       details.className = 'note';
-      details.textContent = place.address || 'Adresse non renseignée — ouvrir Google Maps';
+      details.textContent = place.address || 'Adresse à rechercher…';
+      if (!place.address) enrichAddress(place, details);
 
       info.append(heading,details);
       const distanceLabel=document.createElement('span');distanceLabel.textContent=place.distance.toFixed(1)+' km ↗';
@@ -73,6 +76,46 @@
       article.append(symbol,info,distanceLabel);
       results.append(article);
     }
+  }
+  // Nominatim public API: conservative, sequential reverse lookup (max 1 req/sec).
+  // A nearby road address is not necessarily the mosque's postal address:
+  // display it as an approximate location rather than claiming certainty.
+  const reverseQueue = [];
+  let reverseRunning = false;
+  async function enrichAddress(place, node) {
+    const key = place.lat.toFixed(5)+','+place.lon.toFixed(5);
+    if (addressCache.has(key)) {
+      node.textContent = addressCache.get(key);
+      return;
+    }
+    reverseQueue.push({place,node,key});
+    if (reverseRunning) return;
+    reverseRunning = true;
+    while (reverseQueue.length) {
+      const item = reverseQueue.shift();
+      if (!item.node.isConnected) continue;
+      try {
+        const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat='+
+          encodeURIComponent(item.place.lat)+'&lon='+encodeURIComponent(item.place.lon);
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          const a = data.address || {};
+          const street = [a.house_number,a.road||a.pedestrian||a.footway].filter(Boolean).join(' ');
+          const town = [a.postcode,a.city||a.town||a.village||a.municipality].filter(Boolean).join(' ');
+          const address = [street,town].filter(Boolean).join(', ');
+          if (address) {
+            const label='Adresse approximative : '+address;
+            addressCache.set(item.key,label);
+            if(item.node.isConnected) item.node.textContent=label;
+          } else if(item.node.isConnected) item.node.textContent='Adresse non disponible — voir Google Maps';
+        } else if(item.node.isConnected) item.node.textContent='Adresse non disponible — voir Google Maps';
+      } catch (_) {
+        if(item.node.isConnected) item.node.textContent='Adresse non disponible — voir Google Maps';
+      }
+      if (reverseQueue.length) await new Promise(resolve=>setTimeout(resolve,1200));
+    }
+    reverseRunning = false;
   }
   async function search(lat, lon) {
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
@@ -89,9 +132,13 @@
     const saved=cache.get(cacheKey);
     if(saved && Date.now()-saved.at<15*60*1000){showPlaces(saved.data,lat,lon);activeController=null;return;}
     message(lastSuccessful ? 'Actualisation des mosquées en cours…' : 'Recherche des mosquées à proximité…');
-    const query = '[out:json][timeout:15];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
-      Number(radius.value) + ',' + lat + ',' + lon + ');nwr["building"="mosque"](around:' +
-      Number(radius.value) + ',' + lat + ',' + lon + '););out center;';
+    const around='(around:'+Number(radius.value)+','+lat+','+lon+')';
+    const query = '[out:json][timeout:15];('+
+      'nwr["amenity"="place_of_worship"]["religion"="muslim"]'+around+';'+
+      'nwr["building"="mosque"]'+around+';'+
+      'nwr["amenity"="place_of_worship"]["name"~"mosqu|masjid|cami|mescid",i]'+around+';'+
+      'nwr["name"~"mosqu|masjid|cami|mescid",i]["amenity"="community_centre"]'+around+';'+
+      ');out center;';
     try {
       let data = null;
       const endpoints = [
