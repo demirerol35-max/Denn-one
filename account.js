@@ -7,7 +7,7 @@
  const status=root.querySelector('#deen-account-status');
  const shortcut=document.getElementById('deen-account-shortcut');
  const shortcutLabel=document.getElementById('deen-account-shortcut-label');
- const setIndicator=(u)=>{if(!shortcut)return;const connected=!!u;const name=(u?.user_metadata?.full_name||u?.user_metadata?.name||u?.email?.split('@')[0]||'').trim().split(/\s+/)[0];shortcutLabel.textContent=connected?('✓ '+(name||'Connecté')):'Se connecter';shortcut.dataset.connected=String(connected);shortcut.setAttribute('aria-label',connected?'Compte connecté : '+(u.email||name):'Non connecté : ouvrir les paramètres');shortcut.title=connected?'Connecté : '+(u.email||name):'Se connecter à Deen One';};
+ const setIndicator=(u)=>{if(!shortcut)return;const connected=!!u;const name=(u?.user_metadata?.full_name||u?.user_metadata?.name||u?.email?.split('@')[0]||'').trim().split(/\s+/)[0];shortcutLabel.textContent=connected?('✓ Connecté · '+(name||'Compte')):'Se connecter';shortcut.dataset.connected=String(connected);shortcut.setAttribute('aria-label',connected?'Compte connecté : '+(u.email||name):'Non connecté : ouvrir les paramètres');shortcut.title=connected?'Compte connecté : '+(u.email||name):'Compte non connecté';};
  // The header profile dropdown owns navigation; do not override its click handler.
  setIndicator(null);
  const google=root.querySelector('#deen-account-google');
@@ -26,11 +26,13 @@
   try{
    const sdk=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
    client=sdk.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-   const {data,error}=await client.auth.getUser();
-   if(error)throw error;
-   user=data.user||null;if(user)switchProfile(null,user.id);render();
+   const {data:sessionData,error:sessionError}=await client.auth.getSession();
+   if(sessionError)throw sessionError;
+   user=sessionData.session?.user||null;
+   if(user){const verified=await client.auth.getUser();if(verified.error)throw verified.error;user=verified.data.user||null;}
+   if(user)switchProfile(null,user.id);render();
    client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;password.disabled=false;password.value='';show('Choisis un nouveau mot de passe (8 caractères minimum), puis confirme.');}const previous=user?.id;user=session?.user||null;if(previous!==user?.id){switchProfile(previous,user?.id);}render();});
-  }catch(_){setIndicator(null);show('Impossible de vérifier la connexion. Vérifie Internet et réessaie.');}
+  }catch(_){shortcutLabel.textContent='⚠ Connexion à vérifier';shortcut.dataset.connected='unknown';show('Impossible de vérifier la session. Réessaie avec une connexion Internet active.');}
  }
  function switchProfile(previous,next){
   try{const storedOwner=localStorage.getItem(profileOwnerKey);
@@ -39,8 +41,8 @@
   }catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));
  }
  function render(){setIndicator(user);if(recovering){signOut.hidden=false;signIn.hidden=true;signUp.hidden=true;if(google)google.hidden=true;if(reset){reset.hidden=false;reset.textContent='Confirmer le nouveau mot de passe';}return;}signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;email.hidden=!!user;password.hidden=!!user;if(toggle)toggle.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
-  show(user?'✓ Connecté avec '+(user.email||'ton compte'):'Non connecté. Connecte-toi pour synchroniser ton profil.');
-  if(user)syncName().catch(()=>show('Connecté, mais la synchronisation du profil est indisponible.'));
+  show(user?'🟢 COMPTE CONNECTÉ — '+(user.email||'identité confirmée'):'⚪ NON CONNECTÉ — Connecte-toi pour synchroniser ton profil.');
+  if(user)syncName().catch(()=>show('🟢 COMPTE CONNECTÉ — '+(user.email||'identité confirmée')+' (synchronisation du profil indisponible).'));
  }
  async function syncName(){
   if(!user||!client||syncInFlight)return;
