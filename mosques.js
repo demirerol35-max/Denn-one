@@ -12,6 +12,7 @@
   let lastPosition = null;
   let lastSearchAt = 0;
   let gpsPending = false;
+  const cache = new Map();
 
   function message(value) { status.textContent = value; }
   function distanceKm(lat1, lon1, lat2, lon2) {
@@ -39,7 +40,7 @@
       const name = tags['name:fr'] || tags.name || 'Mosquée';
       const distance = distanceKm(lat, lon, pLat, pLon);
       if (distance > Number(radius.value)/1000) continue;
-      const key = item.type + '/' + item.id;
+      const key = (name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'') + ':' + Math.round(pLat*10000) + ':' + Math.round(pLon*10000));
       unique.set(key, {name, distance, lat:pLat, lon:pLon, address:
         [tags['addr:street'],tags['addr:housenumber'],tags['addr:city']].filter(Boolean).join(' ')});
     }
@@ -47,27 +48,31 @@
     if (!places.length) { message('Aucune mosquée trouvée dans ce rayon. Essaie un rayon plus grand.'); return; }
     message(places.length + ' mosquée(s) trouvée(s). Données OpenStreetMap, à vérifier avant de te déplacer.');
     for (const place of places) {
-      const article = document.createElement('article');
+      const article = document.createElement('a');
       article.className = 'card';
-      article.style.marginBottom = '10px';
+      article.href = directionsUrl(place.lat,place.lon);
+      article.target = '_blank';
+      article.rel = 'noopener noreferrer';
+      article.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit';
+      const symbol=document.createElement('span');symbol.textContent='🕌';symbol.style.fontSize='24px';
+      const info=document.createElement('div');info.style.flex='1';
       const heading = document.createElement('strong');
       heading.textContent = '🕌 ' + place.name;
       const details = document.createElement('p');
       details.className = 'note';
       details.textContent = place.distance.toFixed(1) + ' km à vol d’oiseau' +
         (place.address ? ' · ' + place.address : '');
-      const link = document.createElement('a');
-      link.href = mapsUrl(place.lat, place.lon);
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = 'Voir sur la carte ↗';
+
       const directions = document.createElement('a');
       directions.href = directionsUrl(place.lat, place.lon);
       directions.target = '_blank';
       directions.rel = 'noopener noreferrer';
       directions.textContent = 'Itinéraire ↗';
       directions.style.marginLeft = '16px';
-      article.append(heading, details, directions);
+      info.append(heading,details);
+      const distanceLabel=document.createElement('span');distanceLabel.textContent=place.distance.toFixed(1)+' km ↗';
+      distanceLabel.style.whiteSpace='nowrap';
+      article.append(symbol,info,distanceLabel);
       results.append(article);
     }
   }
@@ -81,46 +86,46 @@
     const controller = new AbortController();
     activeController = controller;
     results.replaceChildren();
+    const cacheKey=[lat.toFixed(2),lon.toFixed(2),radius.value].join(':');
+    const saved=cache.get(cacheKey);
+    if(saved && Date.now()-saved.at<15*60*1000){showPlaces(saved.data,lat,lon);activeController=null;return;}
     message('Recherche des mosquées à proximité…');
-    const timeout = setTimeout(() => controller.abort(), 24000);
-    const query = '[out:json][timeout:12];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
+    const query = '[out:json][timeout:15];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + ');nwr["building"="mosque"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + '););out center;';
     try {
       let data = null;
-      for (const endpoint of ['https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass-api.de/api/interpreter']) {
+      const endpoints = [
+        'https://overpass-api.de/api/interpreter',
+        'https://ovp.dresel.systems/api/interpreter',
+        'https://overpass.private.coffee/api/interpreter'
+      ];
+      for (const endpoint of endpoints) {
+        if(controller.signal.aborted) break;
+        const attempt = new AbortController();
+        const abort = () => attempt.abort();
+        controller.signal.addEventListener('abort',abort,{once:true});
+        const timeout = setTimeout(()=>attempt.abort(),8500);
         try {
-          const response = await fetch(endpoint + '?data=' + encodeURIComponent(query), {
-            method:'GET', signal:controller.signal
+          const response = await fetch(endpoint+'?data='+encodeURIComponent(query),{
+            signal:attempt.signal,headers:{Accept:'application/json'}
           });
-          if (!response.ok) continue;
-          data = await response.json();
-          break;
-        } catch (error) {
-          if (controller.signal.aborted) throw error;
-        }
-      }
-      if (!data) {
-        const km = Number(radius.value)/1000;
-        const dLat = km/111.2, dLon = km/(111.2*Math.max(0.2,Math.cos(lat*Math.PI/180)));
-        const viewbox = [lon-dLon,lat+dLat,lon+dLon,lat-dLat].join(',');
-        const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&bounded=1&limit=40&q=mosque&viewbox=' + encodeURIComponent(viewbox);
-        const response = await fetch(url,{signal:controller.signal});
-        if(response.ok) {
-          const found = await response.json();
-          if(Array.isArray(found)) data={elements:found.map((x,i)=>({
-            type:'node',id:x.place_id||i,lat:Number(x.lat),lon:Number(x.lon),
-            tags:{name:x.name||x.display_name?.split(',')[0]||'Mosquée'}
-          }))};
+          if(!response.ok) continue;
+          const candidate=await response.json();
+          if(Array.isArray(candidate.elements)){data=candidate;break;}
+        } catch (_) {
+          // Try the next provider; avoid one failed provider blocking the list.
+        } finally {
+          clearTimeout(timeout);
+          controller.signal.removeEventListener('abort',abort);
         }
       }
       if (!data) throw new Error('Aucun serveur disponible');
-      if (activeController === controller) showPlaces(data,lat,lon);
+      if (activeController === controller) {cache.set(cacheKey,{at:Date.now(),data});showPlaces(data,lat,lon);}
     } catch (error) {
       if (activeController === controller)
         { message('La liste est indisponible pour le moment. Tu peux réessayer.'); const link=document.createElement('a'); link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('mosquée près de '+lat+','+lon);link.target='_blank';link.rel='noopener noreferrer';link.textContent='🕌 Voir les mosquées sur Google Maps ↗';results.replaceChildren(link); }
     } finally {
-      clearTimeout(timeout);
       if (activeController === controller) activeController = null;
     }
   }
