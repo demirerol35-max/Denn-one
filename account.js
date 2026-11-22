@@ -21,6 +21,7 @@
  let syncInFlight=false;
  let client=null,user=null;
  const show=(msg)=>{status.textContent=msg;};
+ const notifyAuth=()=>window.dispatchEvent(new CustomEvent('deen-auth-state',{detail:{user:user?{id:user.id,email:user.email}:null}}));
  if(!cloudConfigured){show('Compte synchronisé en préparation. Ton prénom reste enregistré sur cet appareil.');signIn.disabled=true;signUp.disabled=true;if(google)google.disabled=true;if(reset)reset.disabled=true;email.disabled=true;password.disabled=true;signOut.hidden=true;return;}
  async function init(){
   try{
@@ -32,7 +33,7 @@
    if(user){const verified=await client.auth.getUser();if(verified.error)throw verified.error;user=verified.data.user||null;}
    if(user)switchProfile(null,user.id);render();
    client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;password.disabled=false;password.value='';show('Choisis un nouveau mot de passe (8 caractères minimum), puis confirme.');}const previous=user?.id;user=session?.user||null;if(previous!==user?.id){switchProfile(previous,user?.id);}render();});
-  }catch(_){shortcutLabel.textContent='⚠ Connexion à vérifier';shortcut.dataset.connected='unknown';show('Impossible de vérifier la session. Réessaie avec une connexion Internet active.');}
+  }catch(_){user=null;notifyAuth();shortcutLabel.textContent='⚠ Connexion à vérifier';shortcut.dataset.connected='unknown';show('Impossible de vérifier la session. Réessaie avec une connexion Internet active.');}
  }
  function switchProfile(previous,next){
   try{const storedOwner=localStorage.getItem(profileOwnerKey);
@@ -40,7 +41,7 @@
    if(next)localStorage.setItem(profileOwnerKey,next);else localStorage.removeItem(profileOwnerKey);
   }catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));
  }
- function render(){setIndicator(user);if(recovering){signOut.hidden=false;signIn.hidden=true;signUp.hidden=true;if(google)google.hidden=true;if(reset){reset.hidden=false;reset.textContent='Confirmer le nouveau mot de passe';}return;}signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;email.hidden=!!user;password.hidden=!!user;if(toggle)toggle.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
+ function render(){setIndicator(user);notifyAuth();if(recovering){signOut.hidden=false;signIn.hidden=true;signUp.hidden=true;if(google)google.hidden=true;if(reset){reset.hidden=false;reset.textContent='Confirmer le nouveau mot de passe';}return;}signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;email.hidden=!!user;password.hidden=!!user;if(toggle)toggle.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
   show(user?'🟢 COMPTE CONNECTÉ — '+(user.email||'identité confirmée'):'⚪ NON CONNECTÉ — Connecte-toi pour synchroniser ton profil.');
   if(user)syncName().catch(()=>show('🟢 COMPTE CONNECTÉ — '+(user.email||'identité confirmée')+' (synchronisation du profil indisponible).'));
  }
