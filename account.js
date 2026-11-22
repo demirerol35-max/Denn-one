@@ -8,7 +8,7 @@
  const shortcut=document.getElementById('deen-account-shortcut');
  const shortcutLabel=document.getElementById('deen-account-shortcut-label');
  const setIndicator=(u)=>{if(!shortcut)return;const connected=!!u;const name=(u?.user_metadata?.full_name||u?.user_metadata?.name||u?.email?.split('@')[0]||'').trim().split(/\s+/)[0];shortcutLabel.textContent=connected?('✓ '+(name||'Connecté')):'Se connecter';shortcut.dataset.connected=String(connected);shortcut.setAttribute('aria-label',connected?'Compte connecté : '+(u.email||name):'Non connecté : ouvrir les paramètres');shortcut.title=connected?'Connecté : '+(u.email||name):'Se connecter à Deen One';};
- if(shortcut)shortcut.addEventListener('click',()=>{const tab=document.querySelector('[data-tab="settings"]');if(tab)tab.click();else location.hash='#settings';});
+ // The header profile dropdown owns navigation; do not override its click handler.
  setIndicator(null);
  const google=root.querySelector('#deen-account-google');
  const signIn=root.querySelector('#deen-account-signin'),signUp=root.querySelector('#deen-account-signup'),signOut=root.querySelector('#deen-account-signout');
@@ -38,7 +38,7 @@
    if(next)localStorage.setItem(profileOwnerKey,next);else localStorage.removeItem(profileOwnerKey);
   }catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));
  }
- function render(){setIndicator(user);if(recovering){signOut.hidden=false;signIn.hidden=true;signUp.hidden=true;if(google)google.hidden=true;if(reset){reset.hidden=false;reset.textContent='Confirmer le nouveau mot de passe';}return;}signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
+ function render(){setIndicator(user);if(recovering){signOut.hidden=false;signIn.hidden=true;signUp.hidden=true;if(google)google.hidden=true;if(reset){reset.hidden=false;reset.textContent='Confirmer le nouveau mot de passe';}return;}signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;email.hidden=!!user;password.hidden=!!user;if(toggle)toggle.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
   show(user?'✓ Connecté avec '+(user.email||'ton compte'):'Non connecté. Connecte-toi pour synchroniser ton profil.');
   if(user)syncName().catch(()=>show('Connecté, mais la synchronisation du profil est indisponible.'));
  }
