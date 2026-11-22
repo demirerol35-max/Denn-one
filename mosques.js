@@ -244,6 +244,38 @@
       {enableHighAccuracy:false, timeout:12000, maximumAge:60000}
     );
   }
+  // Simple contribution flow without GitHub login. No backend is available yet:
+  // open the user's mail app; never claim a suggestion was submitted automatically.
+  const suggestLink=root.querySelector('#mosque-suggest-link');
+  const suggestName=root.querySelector('#mosque-suggest-name');
+  const suggestAddress=root.querySelector('#mosque-suggest-address');
+  const suggestStatus=root.querySelector('#mosque-suggest-status');
+  const suggestLocation=root.querySelector('#mosque-suggest-location');
+  const suggestSubmit=root.querySelector('#mosque-suggest-submit');
+  if(suggestLocation && suggestLink){
+    suggestLocation.addEventListener('click',()=>{
+      if(!navigator.geolocation){suggestStatus.textContent='GPS indisponible.';return;}
+      suggestStatus.textContent='Recherche de ta position…';
+      navigator.geolocation.getCurrentPosition(p=>{
+        suggestLink.value=p.coords.latitude.toFixed(6)+', '+p.coords.longitude.toFixed(6);
+        suggestStatus.textContent='Position ajoutée. Vérifie que la mosquée se trouve bien à cet emplacement.';
+      },()=>{suggestStatus.textContent='Localisation refusée ou indisponible. Colle un lien Maps ou une adresse.';},
+      {enableHighAccuracy:true,timeout:12000});
+    });
+    suggestSubmit.addEventListener('click',()=>{
+      const name=suggestName.value.trim(),link=suggestLink.value.trim(),address=suggestAddress.value.trim();
+      if(name.length<3 || (!link && !address)){
+        suggestStatus.textContent='Indique le nom de la mosquée et au moins un emplacement ou une adresse.';return;
+      }
+      const body=['Proposition de mosquée pour Deen One','','Nom : '+name,
+        'Emplacement / lien : '+(link||'Non fourni'),'Adresse / ville : '+(address||'Non fournie'),
+        '','Merci de vérifier les informations avant publication.'].join('\\n');
+      const url='mailto:demir.erol35@gmail.com?subject='+encodeURIComponent('Deen One - proposition de mosquée')+
+        '&body='+encodeURIComponent(body);
+      suggestStatus.textContent='Ton application e-mail va s’ouvrir. La proposition sera envoyée seulement si tu confirmes l’envoi.';
+      window.location.href=url;
+    });
+  }
   gps.addEventListener('click', locate);
   radius.addEventListener('change', () => { if (lastPosition) search(lastPosition.lat, lastPosition.lon); });
   // The page is a single-page app. Observe its hidden state rather than
