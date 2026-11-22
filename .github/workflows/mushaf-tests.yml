@@ -4,6 +4,7 @@ on:
     paths:
       - 'mushaf.mjs'
       - 'tests/mushaf.test.mjs'
+      - 'tests/mushaf-security.test.mjs'
       - '.github/workflows/mushaf-tests.yml'
   pull_request:
     paths:
@@ -18,4 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/mushaf.test.mjs
+      - name: Validate syntax
+        run: node --check mushaf.mjs && node --check tests/mushaf.test.mjs && node --check tests/mushaf-security.test.mjs
+      - name: Run both Mushaf test suites
+        run: node --test tests/mushaf.test.mjs tests/mushaf-security.test.mjs
