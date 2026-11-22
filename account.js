@@ -1,7 +1,7 @@
 /* Optional Supabase cloud accounts. Leave empty until project is configured. */
 (()=>{
- const SUPABASE_URL='';
- const SUPABASE_PUBLISHABLE_KEY='';
+ const SUPABASE_URL='https://kyvgbbmngslofnkzkzru.supabase.co';
+ const SUPABASE_PUBLISHABLE_KEY='sb_publishable_8droMULcwy5ZX32TqcY7kw_Bz5FCqnE';
  const root=document.getElementById('deen-account');if(!root)return;
  const email=root.querySelector('#deen-account-email'), password=root.querySelector('#deen-account-password');
  const status=root.querySelector('#deen-account-status');
