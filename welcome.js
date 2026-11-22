@@ -10,10 +10,11 @@
  const notice=document.getElementById('deen-profile-notice');
  const key='deen-one-local-profile-v1';
  const wishes=['Qu’Allah facilite ta journée 🤲','Que cette journée t’apporte paix et sérénité 🌿','Qu’Allah bénisse tes efforts aujourd’hui 🤲','Une nouvelle journée pour apprendre et faire le bien ✨','Que la paix accompagne tes pas aujourd’hui 🌙'];
- function getName(){try{return JSON.parse(localStorage.getItem(key)||'{}').name||'';}catch(_){return '';}}
+ let authenticated=false;
+ function getName(){if(!authenticated)return '';try{return JSON.parse(localStorage.getItem(key)||'{}').name||'';}catch(_){return '';}}
  function render(){const name=getName();heading.textContent=name?'Salam Aleykoum '+name+' !':'Salam Aleykoum !';
   const day=Math.floor(Date.now()/86400000);wish.textContent=wishes[day%wishes.length];
-  edit.textContent=name?'Modifier mon prénom':'Ajouter mon prénom';panel.hidden=!!name;input.value=name;
+  edit.textContent=name?'Modifier mon prénom':'Ajouter mon prénom';edit.hidden=!authenticated;panel.hidden=!authenticated||!!name;input.value=name;notice.textContent=authenticated?'Personnalisation de ton compte connecté.':'Connecte-toi pour afficher et modifier ton prénom.';
  }
  edit.addEventListener('click',()=>{panel.hidden=!panel.hidden;if(!panel.hidden)input.focus();});
  save.addEventListener('click',()=>{const name=input.value.trim().replace(/\s+/g,' ').slice(0,40);
@@ -21,6 +22,7 @@
   try{localStorage.setItem(key,JSON.stringify({name}));notice.textContent='Prénom enregistré sur cet appareil.';render();if(window.deenCloud?.saveName)window.deenCloud.saveName(name).catch(()=>{});}
   catch(_){notice.textContent='Impossible d’enregistrer sur cet appareil.';}
  });
+ window.addEventListener('deen-auth-state',e=>{authenticated=!!e.detail?.user;render()});
  window.addEventListener('deen-profile-updated',render);
  render();
 })();
