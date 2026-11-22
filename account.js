@@ -10,6 +10,7 @@
  const setIndicator=(u)=>{if(!shortcut)return;const connected=!!u;const name=(u?.user_metadata?.full_name||u?.user_metadata?.name||u?.email?.split('@')[0]||'').trim().split(/\s+/)[0];shortcutLabel.textContent=connected?('✓ Connecté · '+(name||'Compte')):'Se connecter';shortcut.dataset.connected=String(connected);shortcut.setAttribute('aria-label',connected?'Compte connecté : '+(u.email||name):'Non connecté : ouvrir les paramètres');shortcut.title=connected?'Compte connecté : '+(u.email||name):'Compte non connecté';};
  // The header profile dropdown owns navigation; do not override its click handler.
  setIndicator(null);
+ shortcutLabel.textContent='Vérification…';
  const google=root.querySelector('#deen-account-google');
  const signIn=root.querySelector('#deen-account-signin'),signUp=root.querySelector('#deen-account-signup'),signOut=root.querySelector('#deen-account-signout');
  const reset=root.querySelector('#deen-account-reset');
@@ -22,13 +23,17 @@
  let client=null,user=null;
  const show=(msg)=>{status.textContent=msg;};
  const notifyAuth=()=>window.dispatchEvent(new CustomEvent('deen-auth-state',{detail:{user:user?{id:user.id,email:user.email}:null}}));
+ const pendingTimeout=setTimeout(()=>{if(!client){shortcutLabel.textContent='⚠ Connexion indisponible';shortcut.dataset.connected='unknown';show('Le service de connexion ne répond pas. Vérifie Internet ou réessaie plus tard.');}},12000);
  if(!cloudConfigured){show('Compte synchronisé en préparation. Ton prénom reste enregistré sur cet appareil.');signIn.disabled=true;signUp.disabled=true;if(google)google.disabled=true;if(reset)reset.disabled=true;email.disabled=true;password.disabled=true;signOut.hidden=true;return;}
  async function init(){
   try{
-   const sdk=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+   let sdk;
+   try {sdk=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');}
+   catch(firstError){sdk=await import('https://esm.sh/@supabase/supabase-js@2');}
    client=sdk.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
     auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}
    });
+   clearTimeout(pendingTimeout);
    // Register before reading the session so OAuth redirects and token refreshes are observed.
    client.auth.onAuthStateChange((event,session)=>{
     if(event==='PASSWORD_RECOVERY'){recovering=true;password.disabled=false;password.value='';}
@@ -51,6 +56,7 @@
     else if(verified.data.user){user=verified.data.user;render();}
    }
   }catch(err){
+   clearTimeout(pendingTimeout);
    user=null;notifyAuth();
    shortcutLabel.textContent='⚠ Connexion à vérifier';shortcut.dataset.connected='unknown';
    show('Impossible de vérifier la session : '+(err?.message||'erreur réseau')+'.');
