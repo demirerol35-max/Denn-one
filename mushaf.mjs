@@ -12,7 +12,7 @@ export function validateMushafManifest(manifest,edition){
  if(expected!==null&&manifest.pages.length!==expected)throw Error('Pagination Hafs incorrecte');
  const seen=new Set();
  manifest.pages.forEach((page,index)=>{
-  if(!page||page.number!==index+1||!Number.isInteger(page.number)||typeof page.image!=='string'||!new RegExp('^mushaf-assets/'+edition+'/[a-z0-9_-]+\\.(png|webp|jpg)||typeof page.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(page.sha256)||seen.has(page.image))throw Error('Page non vérifiée : '+(index+1));
+  if(!page||page.number!==index+1||!Number.isInteger(page.number)||typeof page.image!=='string'||!page.image.startsWith('mushaf-assets/'+edition+'/')||!/^mushaf-assets\/[a-z0-9_-]+\/[a-z0-9_-]+\.(png|webp|jpg)$/i.test(page.image)||typeof page.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(page.sha256)||seen.has(page.image))throw Error('Page non vérifiée : '+(index+1));
   seen.add(page.image);
  });
  return Object.freeze({edition,source:manifest.source,license:manifest.license,pages:manifest.pages.map(p=>Object.freeze({...p}))});
