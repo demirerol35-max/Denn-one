@@ -86,6 +86,16 @@ Les favoris sont conservés localement, séparément pour Hafs et Warsh. Ils son
 Les libellés suivent les cinq langues de l’interface. Les tests couvrent l’ajout, le retrait, l’actualisation, le changement de langue, la séparation des éditions, une source modifiée, les données corrompues et un stockage indisponible.
 
 
+## Identité d’une édition et retrait d’un manifeste
+
+La reprise de lecture et les favoris sont désormais liés à une empreinte SHA-256 de l’édition, de sa source et de la liste ordonnée des pages avec leurs empreintes. Un simple nom de source identique ne suffit plus à réutiliser des positions si les images ou leur ordre changent. Les anciennes positions sans cette identité ne sont pas reprises automatiquement ; la lecture classique par versets conserve son fonctionnement indépendant.
+
+Une édition retirée ou interdite par le serveur (HTTP 401, 403, 404 ou 410), ainsi qu’un nouveau manifeste invalide ou non revu, fait supprimer le manifeste précédemment conservé dans le cache. Il ne peut donc plus réapparaître lors de l’ouverture suivante sans réseau. Un problème temporaire du serveur (par exemple HTTP 503) n’efface pas une édition locale valide ; son ouverture hors connexion reste possible.
+
+Les tests simulent aussi une modification des octets des pages sans changement du libellé de source. Cette protection établit une identité technique ; elle ne remplace pas la revue éditoriale.
+
+
+
 
 
 

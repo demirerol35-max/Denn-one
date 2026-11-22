@@ -47,12 +47,12 @@ function ui(moduleOverrides={}){
  const module={mushafSpread,turnMushafSpread,EDITIONS:{hafs:{label:'Hafs'},warsh:{label:'Warsh'}},
   loadMushafManifest:async edition=>({manifest:fixture(edition)}),
   loadVerifiedMushafPage:async()=>({bytes:new Uint8Array([1]),fromCache:false}),...moduleOverrides};
- const c={document:{getElementById:get,querySelectorAll:()=>[],addEventListener:()=>{},createElement:()=>({})},queueMicrotask,AbortController,Blob,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)},
+ const c={document:{getElementById:get,querySelectorAll:()=>[],addEventListener:()=>{},createElement:()=>({})},queueMicrotask,AbortController,Blob,crypto,TextEncoder,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)},
   URL:{createObjectURL:()=> 'blob:test',revokeObjectURL:url=>revoked.push(url)},loadModule:async()=>module};
  vm.createContext(c);
  const start=html.indexOf("const mushafMsg=document.getElementById('mushaf-reader-message')");
  const end=html.indexOf('// Navigation Mushaf :',start);
- vm.runInContext(html.slice(start,end).replaceAll("await import('./mushaf.mjs?v=book-20261122')","await loadModule()"),c);
+ vm.runInContext(html.slice(start,end).replaceAll("await import('./mushaf.mjs?v=identity-20261122')","await loadModule()"),c);
  return {c,get,saved,revoked,module};
 }
 test('switching edition cancels the previous manifest and ignores its late result',async()=>{
@@ -66,13 +66,13 @@ test('switching edition cancels the previous manifest and ignores its late resul
  assert.equal(oldSignal.aborted,true);
  pending.resolve({manifest:{pages:[{number:1,image:'mushaf-assets/hafs/1.webp'}]}});await old;
  assert.equal(get('mushaf-reader-title').textContent,'Warsh d’après Nâfi‘');
- assert.equal(saved.get('deen-mushaf-page-warsh'),'1');
- assert.equal(saved.has('deen-mushaf-page-hafs'),false);
+ assert.equal(JSON.parse(saved.get('deen-mushaf-position-warsh')).page,1);
+ assert.equal(saved.has('deen-mushaf-position-hafs'),false);
 });
 test('closing during page verification cancels loading and never saves the stale page',async()=>{
- const pending=deferred();let pageSignal;
- const {c,get,saved}=ui({loadVerifiedMushafPage:async(page,{signal})=>{pageSignal=signal;return pending.promise}});
- const opening=c.openVerifiedMushaf('hafs');await new Promise(resolve=>setImmediate(resolve));
+ const pending=deferred(),ready=deferred();let pageSignal;
+ const {c,get,saved}=ui({loadVerifiedMushafPage:async(page,{signal})=>{pageSignal=signal;ready.resolve();return pending.promise}});
+ const opening=c.openVerifiedMushaf('hafs');await ready.promise;
  get('mushaf-close').listeners.click();assert.equal(pageSignal.aborted,true);
  pending.resolve({bytes:new Uint8Array([1]),fromCache:false});await opening;
  assert.equal(get('mushaf-reader').hidden,true);assert.equal(saved.size,0);
@@ -89,7 +89,7 @@ test('an undecodable image releases its URL and can be retried',async()=>{
  get('mushaf-page-image').decode=async()=>{};
  await c.renderVerifiedMushaf();
  assert.equal(get('mushaf-retry').hidden,true);
- assert.equal(saved.get('deen-mushaf-page-hafs'),'1');
+ assert.equal(JSON.parse(saved.get('deen-mushaf-position-hafs')).page,1);
 });
 
 test('double-page spreads preserve the requested even page and stay bounded',()=>{
@@ -111,7 +111,7 @@ test('a double-page load fails as a unit when one page fails verification',async
  });
  get('mushaf-layout').value='double';get('mushaf-layout').listeners.change({target:get('mushaf-layout')});
  await c.openVerifiedMushaf('hafs');
- assert.equal(get('mushaf-retry').hidden,false);assert.equal(saved.has('deen-mushaf-page-hafs'),false);
+ assert.equal(get('mushaf-retry').hidden,false);assert.equal(saved.has('deen-mushaf-position-hafs'),false);
  assert.equal(get('mushaf-page-image').src,undefined);assert.equal(get('mushaf-page-image-second').src,undefined);
 });
 test('both verified pages appear together and zoom is bounded',async()=>{
@@ -124,7 +124,7 @@ test('both verified pages appear together and zoom is bounded',async()=>{
  assert.equal(get('mushaf-page-image-second').alt,'Hafs · page 2');
  assert.equal(get('mushaf-counter').textContent,'Pages 1–2 / 2');
  assert.equal(get('mushaf-reader').attributes['aria-busy'],'false');
- assert.equal(saved.get('deen-mushaf-page-hafs'),'1');
+ assert.equal(JSON.parse(saved.get('deen-mushaf-position-hafs')).page,1);
  for(let n=0;n<10;n++)get('mushaf-zoom-in').listeners.click();
  assert.equal(get('mushaf-page-spread').style.width,'200%');assert.equal(get('mushaf-zoom-in').disabled,true);
  get('mushaf-zoom-reset').listeners.click();
@@ -167,7 +167,7 @@ test('page bookmarks are saved separately by edition and rejected when the sourc
 test('bookmark storage filters corrupt, repeated and out-of-range page numbers',async()=>{
  const {c,saved}=ui({loadMushafManifest:async()=>({manifest:{source:'Source',pages:[{number:1,image:'mushaf-assets/hafs/1.webp'},{number:2,image:'mushaf-assets/hafs/2.webp'}]}})});
  await c.openVerifiedMushaf('hafs');
- saved.set('deen-mushaf-bookmarks-hafs',JSON.stringify({version:1,source:'Source',pages:[2,1,2,0,-1,3,1.2,'1',null]}));
+ saved.set('deen-mushaf-bookmarks-hafs',JSON.stringify({version:1,source:vm.runInContext('mushafSource',c),pages:[2,1,2,0,-1,3,1.2,'1',null]}));
  assert.deepEqual(Array.from(c.readMushafBookmarks()),[1,2]);
  saved.set('deen-mushaf-bookmarks-hafs','broken JSON');assert.equal(c.readMushafBookmarks().length,0);
  saved.delete('deen-mushaf-bookmarks-hafs');c.localStorage.setItem=()=>{throw Error('Storage unavailable')};
@@ -175,13 +175,29 @@ test('bookmark storage filters corrupt, repeated and out-of-range page numbers',
  assert.equal(c.document.getElementById('mushaf-reader-message').textContent,'Impossible d’enregistrer ce favori sur cet appareil.');
 });
 test('an unverified page cannot become a bookmark',async()=>{
- const pending=deferred();
- const {c,saved}=ui({loadMushafManifest:async()=>({manifest:{source:'Source',pages:[{number:1,image:'mushaf-assets/hafs/1.webp'}]}}),loadVerifiedMushafPage:async()=>pending.promise});
- const opening=c.openVerifiedMushaf('hafs');await new Promise(resolve=>setImmediate(resolve));
+ const pending=deferred(),ready=deferred();
+ const {c,saved}=ui({loadMushafManifest:async()=>({manifest:{source:'Source',pages:[{number:1,image:'mushaf-assets/hafs/1.webp'}]}}),loadVerifiedMushafPage:async()=>{ready.resolve();return pending.promise}});
+ const opening=c.openVerifiedMushaf('hafs');await ready.promise;
  c.toggleMushafBookmark();assert.equal(saved.has('deen-mushaf-bookmarks-hafs'),false);
  pending.resolve({bytes:new Uint8Array([1]),fromCache:false});await opening;
  c.toggleMushafBookmark();assert.deepEqual(JSON.parse(saved.get('deen-mushaf-bookmarks-hafs')).pages,[1]);
 });
+
+test('reading position and bookmarks cannot move into a changed edition with the same source label',async()=>{
+ let changed=false;
+ const {c,get,module,saved}=ui({loadMushafManifest:async()=>({manifest:{source:'Same source label',edition:'hafs',pages:[{number:1,image:'mushaf-assets/hafs/1.webp',sha256:changed?'b':'a'},{number:2,image:'mushaf-assets/hafs/2.webp',sha256:'c'}]}})});
+ await c.openVerifiedMushaf('hafs');
+ get('mushaf-jump').value='2';c.jumpMushafPage();
+ await new Promise(resolve=>setImmediate(resolve));
+ c.toggleMushafBookmark();
+ const position=JSON.parse(saved.get('deen-mushaf-position-hafs'));
+ assert.equal(position.page,2);assert.equal(position.source.length,64);
+ await c.openVerifiedMushaf('hafs');
+ assert.equal(get('mushaf-jump').value,'2');
+ changed=true;await c.openVerifiedMushaf('hafs');
+ assert.equal(get('mushaf-jump').value,'1');assert.equal(c.readMushafBookmarks().length,0);
+});
+
 
 
 

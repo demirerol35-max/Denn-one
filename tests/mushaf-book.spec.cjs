@@ -2,6 +2,7 @@ const {test,expect}=require('@playwright/test');
 const {createHash}=require('node:crypto');
 const fixture=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVQImWN49/Tsu6dnGVAoAKY7D8HbkeaDAAAAAElFTkSuQmCC','base64');
 const digest=createHash('sha256').update(fixture).digest('hex');
+const revisedFixture=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVQImWO4+vLB1ZcPGFAoAKS1D7WZ5k/VAAAAAElFTkSuQmCC','base64');
 async function expectSpreadPainted(page){
  await page.locator('#mushaf-page-spread').scrollIntoViewIfNeeded();
  await expect.poll(async()=>{
@@ -17,18 +18,20 @@ async function expectSpreadPainted(page){
   },{png,points});
  }).toEqual([[238,229,205],[238,229,205]]);
 }
-async function openReader(page,{edition='hafs',tamper=false}={}){
+async function openReader(page,{edition='hafs',tamper=false,state={revision:0}}={}){
  page.on('dialog',dialog=>dialog.accept());
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
+  const bytes=state.revision?revisedFixture:fixture;
+  const pageDigest=state.revision?createHash('sha256').update(bytes).digest('hex'):digest;
   if(url.hostname!=='127.0.0.1')return route.abort();
   const match=url.pathname.match(/\/mushaf-assets\/(hafs|warsh)\/manifest.json$/);
   if(match){
    const selected=match[1];
-   return route.fulfill({json:{version:1,edition:selected,source:'Automated UI fixture only',license:'Synthetic fixture',reviewed:true,pages:Array.from({length:604},(_,i)=>({number:i+1,image:'mushaf-assets/'+selected+'/'+String(i+1).padStart(3,'0')+'.png',sha256:digest}))}});
+   return route.fulfill({json:{version:1,edition:selected,source:'Automated UI fixture only',license:'Synthetic fixture',reviewed:true,pages:Array.from({length:604},(_,i)=>({number:i+1,image:'mushaf-assets/'+selected+'/'+String(i+1).padStart(3,'0')+'.png',sha256:pageDigest}))}});
   }
   if(/\/mushaf-assets\/(hafs|warsh)\/\d{3}\.png$/.test(url.pathname)){
-   return route.fulfill({body:tamper&&url.pathname.endsWith('/002.png')?Buffer.from('corrupt fixture'):fixture,contentType:'image/png'});
+   return route.fulfill({body:tamper&&url.pathname.endsWith('/002.png')?Buffer.from('corrupt fixture'):bytes,contentType:'image/png'});
   }
   return route.continue();
  });
@@ -127,7 +130,7 @@ test('a corrupt companion page blocks both images and never saves a reading posi
  await expect(page.locator('#mushaf-retry')).toBeVisible();
  await expect(page.locator('#mushaf-page-image')).not.toHaveAttribute('src',/./);
  await expect(page.locator('#mushaf-page-image-second')).not.toHaveAttribute('src',/./);
- expect(await page.evaluate(()=>localStorage.getItem('deen-mushaf-page-hafs'))).toBeNull();
+ expect(await page.evaluate(()=>localStorage.getItem('deen-mushaf-position-hafs'))).toBeNull();
  await expect(page.locator('#mushaf-next')).toBeDisabled();
 });
 
@@ -170,6 +173,23 @@ test('page bookmarks survive reload, remain edition-specific and can be removed'
  await expect(page.locator('#mushaf-bookmark-toggle')).toHaveText('☆ 1. sayfayı ekle');
  await expect(page.locator('#mushaf-bookmarks option[value="300"]')).toHaveText('Sayfa 300');
 });
+
+test('changed page bytes cannot inherit bookmarks or a reading position despite unchanged source text',async({page})=>{
+ const state={revision:0};await openReader(page,{state});
+ await expect(page.locator('#mushaf-bookmark-toggle')).toBeEnabled();
+ await page.locator('#mushaf-jump').fill('300');await page.locator('#mushaf-jump-go').click();
+ await expect(page.locator('#mushaf-bookmark-toggle')).toBeEnabled();
+ await page.locator('#mushaf-bookmark-toggle').click();
+ const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('deen-mushaf-position-hafs')));
+ state.revision=1;await page.locator('#mushaf-open-hafs').click();
+ await expect(page.locator('#mushaf-counter')).toHaveText('Pages 1–2 / 604');
+ await expect(page.locator('#mushaf-bookmark-toggle')).toBeEnabled();
+ await expect(page.locator('#mushaf-bookmarks')).toBeDisabled();
+ await expect(page.locator('#mushaf-bookmark-toggle')).toHaveAttribute('aria-pressed','false');
+ const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('deen-mushaf-position-hafs')));
+ expect(after.page).toBe(1);expect(after.source).not.toBe(before.source);
+});
+
 
 
 

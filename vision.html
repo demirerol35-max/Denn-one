@@ -1060,6 +1060,11 @@ function mushafText(key,values={}){
 function mushafSetMessage(key,values={}){mushafMessageState={key,values};mushafMsg.textContent=mushafText(key,values)}
 function mushafSetStatus(key,values={}){mushafStatusState={key,values};mushafLoadStatus.textContent=mushafText(key,values)}
 
+async function mushafSourceIdentity(manifest){
+ const content=JSON.stringify({edition:manifest.edition,source:manifest.source,pages:manifest.pages.map(page=>[page.number,page.image,page.sha256])});
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(content));
+ return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
+}
 function readMushafBookmarks(){
  if(!mushafEdition||!mushafSource)return [];
  try{
@@ -1132,11 +1137,13 @@ async function openVerifiedMushaf(edition){
  updateMushafZoom(100);mushafSetStatus('loading');
  mushafSetMessage('checkingEdition',{edition});
  try{
-  const module=await import('./mushaf.mjs?v=book-20261122');
+  const module=await import('./mushaf.mjs?v=identity-20261122');
   const {manifest}=await module.loadMushafManifest(edition,{signal});
   if(request!==mushafRequest)return;
-  mushafModule=module;mushafPages=manifest.pages;mushafEdition=edition;mushafSource=manifest.source||'';
-  let stored=1;try{stored=Number(localStorage.getItem('deen-mushaf-page-'+edition))}catch(e){}
+  const identity=await mushafSourceIdentity({...manifest,edition});
+  if(request!==mushafRequest)return;
+  mushafModule=module;mushafPages=manifest.pages;mushafEdition=edition;mushafSource=identity;
+  let stored=1;try{const record=JSON.parse(localStorage.getItem('deen-mushaf-position-'+edition)||'null');if(record?.version===1&&record.source===identity)stored=record.page}catch(e){}
   mushafCurrentPage=Number.isInteger(stored)&&stored>=1&&stored<=mushafPages.length?stored:1;
   mushafReader.hidden=false;document.getElementById('mushaf-reader-title').textContent=mushafText(edition+'Title');
   await renderVerifiedMushaf();
@@ -1172,7 +1179,7 @@ async function renderVerifiedMushaf(){
   const fromCache=loaded.every(item=>item.fromCache);
   mushafSetStatus(fromCache?'cached':'verified');
   mushafSetMessage(fromCache?'readingCached':'reading',{edition:mushafEdition});
-  try{localStorage.setItem('deen-mushaf-page-'+mushafEdition,String(pageNumber))}catch(e){}
+  try{localStorage.setItem('deen-mushaf-position-'+mushafEdition,JSON.stringify({version:1,source:mushafSource,page:pageNumber}))}catch(e){}
  }catch(error){if(request===mushafRequest){mushafAbort?.abort();clearMushafImage();document.getElementById('mushaf-retry').hidden=false;mushafSetStatus('pageUnavailable');mushafSetMessage('blocked');}}
  finally{if(request===mushafRequest){mushafReader.setAttribute('aria-busy','false');document.getElementById('mushaf-prev').disabled=!pageVerified||numbers[0]===1;document.getElementById('mushaf-next').disabled=!pageVerified||numbers[numbers.length-1]===mushafPages.length;refreshMushafBookmarks();}}
 }

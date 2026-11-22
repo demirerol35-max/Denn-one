@@ -75,20 +75,27 @@ export async function loadMushafManifest(edition,{fetcher=globalThis.fetch,cache
  const url='./mushaf-assets/'+edition+'/manifest.json';
  const cache=await optionalCache(cacheStorage,MANIFEST_CACHE);
  let response;
- try{response=await fetchWithDeadline(fetcher,url,signal,timeoutMs,async response=>({ok:response.ok,data:response.ok?await response.text():null}))}
+ try{response=await fetchWithDeadline(fetcher,url,signal,timeoutMs,async response=>({ok:response.ok,status:response.status,data:response.ok?await response.text():null}))}
  catch(error){
   checkAbort(signal);
   let cached=null;
   try{cached=await cache?.match(url)}catch{}
   if(!cached)throw error;
-  const manifest=validateMushafManifest(await cached.json(),edition);
+  let manifest;
+  try{manifest=validateMushafManifest(await cached.json(),edition)}
+  catch(error){try{await cache?.delete(url)}catch{}throw error}
   checkAbort(signal);
   return {manifest,offline:true};
  }
  checkAbort(signal);
  // An explicitly withdrawn or invalid edition must never be revived from cache.
- if(!response.ok)throw Error('Édition non publiée ou non validée');
- const manifest=validateMushafManifest(JSON.parse(response.data),edition);
+ if(!response.ok){
+  if([401,403,404,410].includes(response.status)){try{await cache?.delete(url)}catch{}}
+  throw Error('Édition non publiée ou non validée');
+ }
+ let manifest;
+ try{manifest=validateMushafManifest(JSON.parse(response.data),edition)}
+ catch(error){try{await cache?.delete(url)}catch{}throw error}
  checkAbort(signal);
  try{await cache?.put(url,new Response(JSON.stringify(manifest),{headers:{'Content-Type':'application/json'}}))}catch{}
  checkAbort(signal);

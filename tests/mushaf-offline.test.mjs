@@ -17,6 +17,26 @@ function memoryStorage(){
  }};
 }
 const offline=async()=>{throw new TypeError('Network offline')};
+
+test('withdrawal or invalidation clears a previously cached manifest before the next offline opening',async()=>{
+ for(const response of [
+  ...[401,403,404,410].map(status=>new Response('',{status})),
+  new Response('invalid JSON'),
+  Response.json({...manifest('hafs'),reviewed:false})
+ ]){
+  const cacheStorage=memoryStorage();
+  await loadMushafManifest('hafs',{cacheStorage,fetcher:async()=>Response.json(manifest('hafs'))});
+  await assert.rejects(loadMushafManifest('hafs',{cacheStorage,fetcher:async()=>response}));
+  await assert.rejects(loadMushafManifest('hafs',{cacheStorage,fetcher:offline}));
+ }
+});
+test('a temporary server failure does not erase a previously verified offline manifest',async()=>{
+ const cacheStorage=memoryStorage();
+ await loadMushafManifest('warsh',{cacheStorage,fetcher:async()=>Response.json(manifest('warsh'))});
+ await assert.rejects(loadMushafManifest('warsh',{cacheStorage,fetcher:async()=>new Response('',{status:503})}));
+ assert.equal((await loadMushafManifest('warsh',{cacheStorage,fetcher:offline})).offline,true);
+});
+
 test('manifest is revalidated offline and Hafs and Warsh caches remain separate',async()=>{
  const cacheStorage=memoryStorage();
  for(const edition of ['hafs','warsh']){
@@ -112,10 +132,10 @@ test('installed service worker serves the reader module offline and preserves ve
  assert.equal(cacheStorage.stores.has('deen-mushaf-pages-v1'),true);
  assert.equal(cacheStorage.stores.has('deen-mushaf-manifests-v1'),true);
  let response;
- handlers.fetch({request:new Request('https://example.org/app/mushaf.mjs?v=book-20261122'),respondWith:p=>{response=p},waitUntil:()=>{}});
+ handlers.fetch({request:new Request('https://example.org/app/mushaf.mjs?v=identity-20261122'),respondWith:p=>{response=p},waitUntil:()=>{}});
  assert.equal(await (await response).text(),moduleBody);
  let intercepted=false;
- handlers.fetch({request:new Request('https://example.org/app/mushaf.mjs?v=book-20261122&token=private'),respondWith:()=>{intercepted=true},waitUntil:()=>{}});
+ handlers.fetch({request:new Request('https://example.org/app/mushaf.mjs?v=identity-20261122&token=private'),respondWith:()=>{intercepted=true},waitUntil:()=>{}});
  assert.equal(intercepted,false,'Private query parameters must not enter the application cache');
 });
 
