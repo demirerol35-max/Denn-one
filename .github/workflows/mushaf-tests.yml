@@ -5,6 +5,8 @@ on:
       - 'mushaf.mjs'
       - 'vision.html'
       - 'tests/mushaf-reader.test.mjs'
+      - 'tests/mushaf-offline.test.mjs'
+      - 'service-worker.js'
       - 'tests/mushaf.test.mjs'
       - 'tests/mushaf-security.test.mjs'
       - '.github/workflows/mushaf-tests.yml'
@@ -13,7 +15,10 @@ on:
       - 'mushaf.mjs'
       - 'vision.html'
       - 'tests/mushaf-reader.test.mjs'
+      - 'tests/mushaf-offline.test.mjs'
+      - 'service-worker.js'
       - 'tests/mushaf.test.mjs'
+      - 'tests/mushaf-security.test.mjs'
       - '.github/workflows/mushaf-tests.yml'
 jobs:
   validate:
@@ -25,5 +30,6 @@ jobs:
           node-version: '22'
       - name: Validate syntax
         run: node --check mushaf.mjs && node --check tests/mushaf.test.mjs && node --check tests/mushaf-security.test.mjs
-      - name: Run both Mushaf test suites
-        run: node --test tests/mushaf.test.mjs tests/mushaf-security.test.mjs tests/mushaf-reader.test.mjs
+      - name: Run Mushaf validation, reader and offline tests
+        run: node --test tests/mushaf.test.mjs tests/mushaf-security.test.mjs tests/mushaf-reader.test.mjs tests/mushaf-offline.test.mjs
+

@@ -16,7 +16,7 @@ export function validateMushafManifest(manifest,edition){
   if(!page||page.number!==index+1||!Number.isInteger(page.number)||typeof page.image!=='string'||!page.image.startsWith('mushaf-assets/'+edition+'/')||!/^mushaf-assets\/[a-z0-9_-]+\/[a-z0-9_-]+\.(png|webp|jpg)$/i.test(page.image)||typeof page.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(page.sha256)||seen.has(page.image))throw Error('Page non vérifiée : '+(index+1));
   seen.add(page.image);
  });
- return Object.freeze({edition,source:manifest.source,license:manifest.license,pages:manifest.pages.map(p=>Object.freeze({...p}))});
+ return Object.freeze({version:1,edition,source:manifest.source,license:manifest.license,reviewed:true,pages:Object.freeze(manifest.pages.map(p=>Object.freeze({...p})))});
 }
 export function nextPage(page,total,direction){
  if(!Number.isInteger(total)||total<1)throw Error('Nombre de pages incorrect');
@@ -32,3 +32,81 @@ export async function verifyPageBytes(bytes,expectedSha256){
  const actual=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
  return actual===expectedSha256.toLowerCase();
 }
+
+
+// Keep verified Mushaf content separate from the service worker's application shell.
+const MANIFEST_CACHE='deen-mushaf-manifests-v1';
+const PAGE_CACHE='deen-mushaf-pages-v1';
+export const MAX_CACHED_PAGES=12;
+function checkAbort(signal){
+ if(signal?.aborted)throw signal.reason||new DOMException('Chargement annulé','AbortError');
+}
+async function optionalCache(storage,name){
+ try{return await storage?.open(name)||null}catch{return null}
+}
+async function fetchWithDeadline(fetcher,url,signal,timeoutMs,consume){
+ checkAbort(signal);
+ const controller=new AbortController();
+ const abort=()=>controller.abort(signal.reason);
+ signal?.addEventListener('abort',abort,{once:true});
+ const timer=setTimeout(()=>controller.abort(new DOMException('Délai de chargement dépassé','TimeoutError')),timeoutMs);
+ try{return await consume(await fetcher(url,{signal:controller.signal,cache:'no-store'}))}
+ finally{clearTimeout(timer);signal?.removeEventListener('abort',abort)}
+}
+export async function loadMushafManifest(edition,{fetcher=globalThis.fetch,cacheStorage=globalThis.caches,signal,timeoutMs=15000}={}){
+ if(!Object.hasOwn(EDITIONS,edition))throw Error('Édition inconnue');
+ checkAbort(signal);
+ const url='./mushaf-assets/'+edition+'/manifest.json';
+ const cache=await optionalCache(cacheStorage,MANIFEST_CACHE);
+ let response;
+ try{response=await fetchWithDeadline(fetcher,url,signal,timeoutMs,async response=>({ok:response.ok,data:response.ok?await response.text():null}))}
+ catch(error){
+  checkAbort(signal);
+  let cached=null;
+  try{cached=await cache?.match(url)}catch{}
+  if(!cached)throw error;
+  const manifest=validateMushafManifest(await cached.json(),edition);
+  checkAbort(signal);
+  return {manifest,offline:true};
+ }
+ checkAbort(signal);
+ // An explicitly withdrawn or invalid edition must never be revived from cache.
+ if(!response.ok)throw Error('Édition non publiée ou non validée');
+ const manifest=validateMushafManifest(JSON.parse(response.data),edition);
+ checkAbort(signal);
+ try{await cache?.put(url,new Response(JSON.stringify(manifest),{headers:{'Content-Type':'application/json'}}))}catch{}
+ checkAbort(signal);
+ return {manifest,offline:false};
+}
+export async function loadVerifiedMushafPage(page,{fetcher=globalThis.fetch,cacheStorage=globalThis.caches,signal,timeoutMs=15000}={}){
+ if(!page||!/^mushaf-assets\/(hafs|warsh)\/[a-z0-9_-]+\.(png|webp|jpg)$/i.test(page.image)||!/^[a-f0-9]{64}$/i.test(page.sha256))throw Error('Page non vérifiée');
+ checkAbort(signal);
+ const cache=await optionalCache(cacheStorage,PAGE_CACHE);
+ // A publisher replacing a page at the same path cannot mix old and new bytes.
+ const key='./'+page.image+'?sha256='+page.sha256.toLowerCase();
+ let cached=null;
+ try{cached=await cache?.match(key)}catch{}
+ if(cached){
+  const bytes=await cached.arrayBuffer();
+  const valid=await verifyPageBytes(bytes,page.sha256);
+  checkAbort(signal);
+  if(valid)return {bytes,fromCache:true};
+  try{await cache.delete(key)}catch{}
+ }
+ const response=await fetchWithDeadline(fetcher,'./'+page.image,signal,timeoutMs,async response=>({ok:response.ok,bytes:response.ok?await response.arrayBuffer():null}));
+ if(!response.ok)throw Error('Page introuvable');
+ const bytes=response.bytes;
+ checkAbort(signal);
+ if(!await verifyPageBytes(bytes,page.sha256))throw Error('Empreinte SHA-256 incorrecte');
+ checkAbort(signal);
+ // Cache failures (private mode, quota) must not prevent verified online reading.
+ try{
+  await cache?.put(key,new Response(bytes));
+  const keys=await cache?.keys()||[];
+  for(const entry of keys.slice(0,Math.max(0,keys.length-MAX_CACHED_PAGES)))await cache.delete(entry);
+ }catch{}
+ checkAbort(signal);
+ return {bytes,fromCache:false};
+}
+
+
