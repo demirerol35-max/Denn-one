@@ -11,3 +11,9 @@ Prepared backend: Supabase Auth + Postgres RLS, with optional sync of display na
 6. Review privacy policy, retention, consent, data export/deletion, and moderation before production.
 
 The app remains usable without an account. Do not force sign-in for prayer times or Quran reading.
+
+## Google login and biometrics
+- In Supabase Auth > Providers, enable Google and configure its OAuth client ID/secret in the **Supabase dashboard**, not in GitHub. Register the callback URL shown by Supabase in Google Cloud and add the deployed Deen One URL to Supabase redirect allowlist.
+- The app's **Continue with Google** button calls `signInWithOAuth({provider:'google'})` only after Supabase is configured.
+- Biometric login is **not implemented**. Never use a local fingerprint prompt as proof of a cloud identity. Evaluate standards-based WebAuthn/passkeys using a provider that supports passkeys and correct account binding, recovery, device compatibility, and Android WebView behavior. Do not store biometric templates in Deen One.
+- Apple sign-in can be considered later, subject to provider configuration and applicable platform requirements.
