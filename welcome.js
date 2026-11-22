@@ -18,8 +18,9 @@
  edit.addEventListener('click',()=>{panel.hidden=!panel.hidden;if(!panel.hidden)input.focus();});
  save.addEventListener('click',()=>{const name=input.value.trim().replace(/\s+/g,' ').slice(0,40);
   if(!name){notice.textContent='Indique un prénom.';return;}
-  try{localStorage.setItem(key,JSON.stringify({name}));notice.textContent='Prénom enregistré sur cet appareil.';render();}
+  try{localStorage.setItem(key,JSON.stringify({name}));notice.textContent='Prénom enregistré sur cet appareil.';render();if(window.deenCloud?.saveName)window.deenCloud.saveName(name).catch(()=>{});}
   catch(_){notice.textContent='Impossible d’enregistrer sur cet appareil.';}
  });
+ window.addEventListener('deen-profile-updated',render);
  render();
 })();
