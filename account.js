@@ -26,14 +26,35 @@
  async function init(){
   try{
    const sdk=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-   client=sdk.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-   const {data:sessionData,error:sessionError}=await client.auth.getSession();
-   if(sessionError)throw sessionError;
-   user=sessionData.session?.user||null;
-   if(user){const verified=await client.auth.getUser();if(verified.error)throw verified.error;user=verified.data.user||null;}
-   if(user)switchProfile(null,user.id);render();
-   client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;password.disabled=false;password.value='';show('Choisis un nouveau mot de passe (8 caractères minimum), puis confirme.');}const previous=user?.id;user=session?.user||null;if(previous!==user?.id){switchProfile(previous,user?.id);}render();});
-  }catch(_){user=null;notifyAuth();shortcutLabel.textContent='⚠ Connexion à vérifier';shortcut.dataset.connected='unknown';show('Impossible de vérifier la session. Réessaie avec une connexion Internet active.');}
+   client=sdk.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+    auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}
+   });
+   // Register before reading the session so OAuth redirects and token refreshes are observed.
+   client.auth.onAuthStateChange((event,session)=>{
+    if(event==='PASSWORD_RECOVERY'){recovering=true;password.disabled=false;password.value='';}
+    const previous=user?.id;
+    user=session?.user||null;
+    if(previous!==user?.id)switchProfile(previous,user?.id);
+    render();
+    if(event==='PASSWORD_RECOVERY')show('Choisis un nouveau mot de passe (8 caractères minimum), puis confirme.');
+   });
+   const {data,error}=await client.auth.getSession();
+   if(error)throw error;
+   const previous=user?.id;
+   user=data.session?.user||null;
+   if(previous!==user?.id)switchProfile(previous,user?.id);
+   render();
+   // Verify the server-side identity without blocking initial UI or OAuth callback processing.
+   if(user){
+    const verified=await client.auth.getUser();
+    if(verified.error){show('Session détectée, mais vérification Google indisponible : reconnecte-toi si nécessaire.');}
+    else if(verified.data.user){user=verified.data.user;render();}
+   }
+  }catch(err){
+   user=null;notifyAuth();
+   shortcutLabel.textContent='⚠ Connexion à vérifier';shortcut.dataset.connected='unknown';
+   show('Impossible de vérifier la session : '+(err?.message||'erreur réseau')+'.');
+  }
  }
  function switchProfile(previous,next){
   try{const storedOwner=localStorage.getItem(profileOwnerKey);
@@ -73,7 +94,7 @@
  if(google)google.addEventListener('click',async()=>{
   if(!client)return;
   show('Ouverture de la connexion Google…');
-  const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname}});
+  const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname,skipBrowserRedirect:false}});
   if(error)show('Connexion Google indisponible : '+error.message);
  });
  if(reset)reset.addEventListener('click',async()=>{
