@@ -82,16 +82,16 @@
     activeController = controller;
     results.replaceChildren();
     message('Recherche des mosquées à proximité…');
-    const timeout = setTimeout(() => controller.abort(), 18000);
+    const timeout = setTimeout(() => controller.abort(), 24000);
     const query = '[out:json][timeout:12];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + ');nwr["building"="mosque"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + '););out center;';
     try {
       let data = null;
-      for (const endpoint of ['https://overpass.kumi.systems/api/interpreter', 'https://overpass.nchc.org.tw/api/interpreter', 'https://overpass-api.de/api/interpreter']) {
+      for (const endpoint of ['https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass-api.de/api/interpreter']) {
         try {
-          const response = await fetch(endpoint, {
-            method:'POST', body:new URLSearchParams({data:query}), signal:controller.signal
+          const response = await fetch(endpoint + '?data=' + encodeURIComponent(query), {
+            method:'GET', signal:controller.signal
           });
           if (!response.ok) continue;
           data = await response.json();
@@ -104,7 +104,7 @@
       if (activeController === controller) showPlaces(data,lat,lon);
     } catch (error) {
       if (activeController === controller)
-        message('Le service cartographique ne répond pas. Réessaie ou utilise la recherche par ville.');
+        { message('Le service cartographique ne répond pas. Ouvre la carte pour voir les mosquées autour de toi.'); const link=document.createElement('a'); link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('mosquée près de '+lat+','+lon);link.target='_blank';link.rel='noopener noreferrer';link.textContent='🕌 Voir les mosquées sur Google Maps ↗';results.replaceChildren(link); }
     } finally {
       clearTimeout(timeout);
       if (activeController === controller) activeController = null;
