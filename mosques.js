@@ -270,9 +270,9 @@
       const body=['Proposition de mosquée pour Deen One','','Nom : '+name,
         'Emplacement / lien : '+(link||'Non fourni'),'Adresse / ville : '+(address||'Non fournie'),
         '','Merci de vérifier les informations avant publication.'].join('\\n');
-      const url='mailto:demir.erol35@gmail.com?subject='+encodeURIComponent('Deen One - proposition de mosquée')+
+      const url='mailto:?subject='+encodeURIComponent('Deen One - proposition de mosquée')+
         '&body='+encodeURIComponent(body);
-      suggestStatus.textContent='Ton application e-mail va s’ouvrir. La proposition sera envoyée seulement si tu confirmes l’envoi.';
+      suggestStatus.textContent='Ton application e-mail va s’ouvrir. Il faudra choisir un destinataire et confirmer l’envoi. La réception directe par Deen One nécessite encore un service de collecte.';
       window.location.href=url;
     });
   }
