@@ -53,7 +53,7 @@
       link.href = mapsUrl(place.lat, place.lon);
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.textContent = 'Voir sur la carte ↗';
+      link.textContent = 'Itinéraire / carte ↗';
       article.append(heading, details, link);
       results.append(article);
     }
@@ -68,7 +68,7 @@
     const query = '[out:json][timeout:15];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + '););out center;';
     try {
-      const response = await fetch('https://overpass.kumi.systems/api/interpreter', {
+      const response = await fetch('https://overpass-api.de/api/interpreter', {
         method:'POST', body:new URLSearchParams({data:query}), signal:controller.signal
       });
       if (!response.ok) throw new Error('Service temporairement indisponible');
