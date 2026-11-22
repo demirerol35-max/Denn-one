@@ -1,0 +1,14 @@
+name = "deen-one-mosques"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://demirerol35-max.github.io"
+
+[[durable_objects.bindings]]
+name = "QUOTA"
+class_name = "MosqueQuota"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MosqueQuota"]
