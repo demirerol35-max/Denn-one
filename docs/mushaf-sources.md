@@ -77,5 +77,15 @@ La suite navigateur vérifie les cinq langues, la conservation du choix de prés
 Ces traductions et tests n’activent aucune édition non revue et ne constituent pas une validation éditoriale des pages.
 
 
+## Favoris de pages
+
+Le lecteur permet d’ajouter ou retirer la page sélectionnée des favoris. En double page, le numéro affiché dans le bouton précise laquelle des deux pages est concernée. La liste des favoris permet de rejoindre directement une page ; ses images sont vérifiées à nouveau avant affichage.
+
+Les favoris sont conservés localement, séparément pour Hafs et Warsh. Ils sont associés à la source déclarée par l’édition : une autre version de la source ne réutilise pas des numéros de pages potentiellement différents. Les données locales malformées et les numéros hors limites sont ignorés. Aucun favori ne peut être ajouté tant que la page n’est pas vérifiée. Si l’enregistrement échoue, un message est affiché et le lecteur ne présente pas le favori comme enregistré.
+
+Les libellés suivent les cinq langues de l’interface. Les tests couvrent l’ajout, le retrait, l’actualisation, le changement de langue, la séparation des éditions, une source modifiée, les données corrompues et un stockage indisponible.
+
+
+
 
 

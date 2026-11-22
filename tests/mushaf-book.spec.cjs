@@ -143,4 +143,33 @@ test('Arabic alphabet quiz starts and accepts an answer without its former initi
  expect(errors.filter(message=>message.includes("Cannot access 'word'"))).toEqual([]);
 });
 
+test('page bookmarks survive reload, remain edition-specific and can be removed',async({page})=>{
+ await openReader(page,{edition:'hafs'});
+ await expect(page.locator('#mushaf-bookmark-toggle')).toBeEnabled();
+ await page.locator('#mushaf-bookmark-toggle').click();
+ await expect(page.locator('#mushaf-bookmark-toggle')).toHaveAttribute('aria-pressed','true');
+ await page.locator('#mushaf-jump').fill('300');await page.locator('#mushaf-jump-go').click();
+ await expect(page.locator('#mushaf-bookmark-toggle')).toBeEnabled();
+ await page.locator('#mushaf-bookmark-toggle').click();
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('deen-mushaf-bookmarks-hafs')).pages)).toEqual([1,300]);
+ await page.locator('#mushaf-open-warsh').click();
+ await expect(page.locator('#mushaf-bookmark-toggle')).toBeEnabled();
+ await expect(page.locator('#mushaf-bookmarks')).toBeDisabled();
+ await expect(page.locator('#mushaf-bookmark-toggle')).toHaveAttribute('aria-pressed','false');
+ await page.reload();
+ await page.locator('[data-tab="quran"]').first().evaluate(button=>button.click());
+ await page.locator('#mushaf-open-hafs').click();
+ await expect(page.locator('#mushaf-bookmark-toggle')).toBeEnabled();
+ await expect(page.locator('#mushaf-bookmark-toggle')).toHaveAttribute('aria-pressed','true');
+ await page.locator('#mushaf-bookmarks').selectOption('1');
+ await expect(page.locator('#mushaf-counter')).toHaveText('Pages 1–2 / 604');
+ await expect(page.locator('#mushaf-bookmark-toggle')).toBeEnabled();
+ await page.locator('#mushaf-bookmark-toggle').click();
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('deen-mushaf-bookmarks-hafs')).pages)).toEqual([300]);
+ await page.locator('#app-language').evaluate(select=>{select.value='tr';select.dispatchEvent(new Event('change',{bubbles:true}))});
+ await expect(page.locator('#mushaf-bookmark-toggle')).toHaveText('☆ 1. sayfayı ekle');
+ await expect(page.locator('#mushaf-bookmarks option[value="300"]')).toHaveText('Sayfa 300');
+});
+
+
 

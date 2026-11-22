@@ -32,7 +32,9 @@ function deferred(){let resolve,reject;const promise=new Promise((yes,no)=>{reso
 function ui(moduleOverrides={}){
  const nodes=new Map(),saved=new Map(),revoked=[];
  const get=id=>{
-  if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:'',style:{},attributes:{},listeners:{},
+  if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:'',style:{},attributes:{},listeners:{},children:[],
+   replaceChildren(...children){this.children=children},
+   append(child){this.children.push(child)},
    addEventListener(type,handler){this.listeners[type]=handler},
    setAttribute(name,value){this.attributes[name]=value},
    getAttribute(name){return this.attributes[name]??null},
@@ -45,7 +47,7 @@ function ui(moduleOverrides={}){
  const module={mushafSpread,turnMushafSpread,EDITIONS:{hafs:{label:'Hafs'},warsh:{label:'Warsh'}},
   loadMushafManifest:async edition=>({manifest:fixture(edition)}),
   loadVerifiedMushafPage:async()=>({bytes:new Uint8Array([1]),fromCache:false}),...moduleOverrides};
- const c={document:{getElementById:get,querySelectorAll:()=>[],addEventListener:()=>{}},queueMicrotask,AbortController,Blob,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)},
+ const c={document:{getElementById:get,querySelectorAll:()=>[],addEventListener:()=>{},createElement:()=>({})},queueMicrotask,AbortController,Blob,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)},
   URL:{createObjectURL:()=> 'blob:test',revokeObjectURL:url=>revoked.push(url)},loadModule:async()=>module};
  vm.createContext(c);
  const start=html.indexOf("const mushafMsg=document.getElementById('mushaf-reader-message')");
@@ -148,6 +150,39 @@ test('all reader languages preserve template parameters and live errors follow l
  get('mushaf-fullscreen').listeners.click();
  assert.equal(get('mushaf-reader-message').textContent,dictionary.ar.fullscreenUnavailable);
 });
+
+test('page bookmarks are saved separately by edition and rejected when the source changes',async()=>{
+ const {c,get,saved,module}=ui({loadMushafManifest:async edition=>({manifest:{source:'Source '+edition,pages:[{number:1,image:'mushaf-assets/'+edition+'/1.webp'}]}})});
+ await c.openVerifiedMushaf('hafs');c.toggleMushafBookmark();
+ assert.deepEqual(JSON.parse(saved.get('deen-mushaf-bookmarks-hafs')).pages,[1]);
+ await c.openVerifiedMushaf('warsh');
+ assert.equal(get('mushaf-bookmark-toggle').attributes['aria-pressed'],'false');
+ c.toggleMushafBookmark();
+ assert.deepEqual(JSON.parse(saved.get('deen-mushaf-bookmarks-warsh')).pages,[1]);
+ await c.openVerifiedMushaf('hafs');
+ assert.equal(get('mushaf-bookmark-toggle').attributes['aria-pressed'],'true');
+ module.loadMushafManifest=async()=>({manifest:{source:'Revised source',pages:[{number:1,image:'mushaf-assets/hafs/1.webp'}]}});
+ await c.openVerifiedMushaf('hafs');assert.equal(c.readMushafBookmarks().length,0);
+});
+test('bookmark storage filters corrupt, repeated and out-of-range page numbers',async()=>{
+ const {c,saved}=ui({loadMushafManifest:async()=>({manifest:{source:'Source',pages:[{number:1,image:'mushaf-assets/hafs/1.webp'},{number:2,image:'mushaf-assets/hafs/2.webp'}]}})});
+ await c.openVerifiedMushaf('hafs');
+ saved.set('deen-mushaf-bookmarks-hafs',JSON.stringify({version:1,source:'Source',pages:[2,1,2,0,-1,3,1.2,'1',null]}));
+ assert.deepEqual(Array.from(c.readMushafBookmarks()),[1,2]);
+ saved.set('deen-mushaf-bookmarks-hafs','broken JSON');assert.equal(c.readMushafBookmarks().length,0);
+ saved.delete('deen-mushaf-bookmarks-hafs');c.localStorage.setItem=()=>{throw Error('Storage unavailable')};
+ c.toggleMushafBookmark();assert.equal(saved.has('deen-mushaf-bookmarks-hafs'),false);
+ assert.equal(c.document.getElementById('mushaf-reader-message').textContent,'Impossible d’enregistrer ce favori sur cet appareil.');
+});
+test('an unverified page cannot become a bookmark',async()=>{
+ const pending=deferred();
+ const {c,saved}=ui({loadMushafManifest:async()=>({manifest:{source:'Source',pages:[{number:1,image:'mushaf-assets/hafs/1.webp'}]}}),loadVerifiedMushafPage:async()=>pending.promise});
+ const opening=c.openVerifiedMushaf('hafs');await new Promise(resolve=>setImmediate(resolve));
+ c.toggleMushafBookmark();assert.equal(saved.has('deen-mushaf-bookmarks-hafs'),false);
+ pending.resolve({bytes:new Uint8Array([1]),fromCache:false});await opening;
+ c.toggleMushafBookmark();assert.deepEqual(JSON.parse(saved.get('deen-mushaf-bookmarks-hafs')).pages,[1]);
+});
+
 
 
 
