@@ -72,7 +72,7 @@
       const details = document.createElement('p');
       details.className = 'note';
       details.textContent = place.address || 'Adresse à rechercher…';
-      if (!place.address) enrichAddress(place, details);
+      // Avoid dozens of reverse-geocoding requests on every search.
 
       info.append(heading,details);
       const distanceLabel=document.createElement('span');distanceLabel.textContent=place.distance.toFixed(1)+' km ↗';
@@ -136,20 +136,16 @@
     const cacheKey=[lat.toFixed(2),lon.toFixed(2),radius.value].join(':');
     const saved=cache.get(cacheKey);
     if(saved && Date.now()-saved.at<30*60*1000){showPlaces(saved.data,lat,lon);activeController=null;return;}
+    if(!saved){for(const [key,v] of cache){if(key.startsWith(lat.toFixed(2)+':'+lon.toFixed(2)+':') && v.data && Date.now()-v.at<7*86400000){showPlaces(v.data,lat,lon);message('Dernière liste disponible. Actualisation en cours…');break;}}}
     if(saved) {showPlaces(saved.data,lat,lon);message('Dernière liste disponible. Actualisation en cours…');}
     message(lastSuccessful ? 'Actualisation des mosquées en cours…' : 'Recherche des mosquées à proximité…');
     const around='(around:'+Number(radius.value)+','+lat+','+lon+')';
-    const query = '[out:json][timeout:15];('+
-      'nwr["amenity"="place_of_worship"]["religion"="muslim"]'+around+';'+
-      'nwr["building"="mosque"]'+around+';'+
-      'nwr["amenity"="place_of_worship"]["name"~"mosqu|masjid|cami|mescid",i]'+around+';'+
-      'nwr["name"~"mosqu|masjid|cami|mescid",i]["amenity"="community_centre"]'+around+';'+
-      ');out center;';
+    const query = '[out:json][timeout:12];(nwr["amenity"="place_of_worship"]["religion"="muslim"]'+around+';nwr["building"="mosque"]'+around+');out center;';
     try {
       let data = null;
       const endpoints = [
+        'https://overpass.kumi.systems/api/interpreter',
         'https://overpass-api.de/api/interpreter',
-        'https://ovp.dresel.systems/api/interpreter',
         'https://overpass.private.coffee/api/interpreter'
       ];
       // Query the independent endpoints concurrently; return the first valid
@@ -158,7 +154,7 @@
         const attempt = new AbortController();
         const abort = () => attempt.abort();
         controller.signal.addEventListener('abort',abort,{once:true});
-        const timeout = setTimeout(()=>attempt.abort(),6000);
+        const timeout = setTimeout(()=>attempt.abort(),9000);
         try {
           const response = await fetch(endpoint+'?data='+encodeURIComponent(query),{
             signal:attempt.signal,headers:{Accept:'application/json'}
