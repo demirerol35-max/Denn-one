@@ -16,6 +16,14 @@
 7. **Ramadan** — Souhour/Iftar calculés selon lieu et méthode ; calendrier et invocations sourcées ; suivi du jeûne facultatif ; gérer les avis locaux et les cas particuliers.
 8. **Recherche de mosquées** — Carte/liste via fournisseur de données documenté, recherche par ville sans GPS obligatoire ; signaler que les horaires et lieux doivent être vérifiés, respecter quotas et vie privée.
 
+
+## Coran — deux éditions Mushaf distinctes (demande du 22 novembre 2026)
+- **Hafs ‘an ‘Âsim** : Mushaf de Médine avec pagination et texte authentiques, navigation droite-gauche.
+- **Warsh ‘an Nâfi‘** : édition Mushaf Warsh vérifiée, avec sa propre graphie, vocalisation, pagination et récitations correspondantes. Ne pas réutiliser artificiellement la mise en page Hafs.
+- Sélecteur explicite **Hafs / Warsh** dans la rubrique Coran, choix mémorisé localement, et affichage permanent de l'édition active.
+- Chaque édition doit disposer d'une source documentée, d'une autorisation/licence de diffusion, d'une validation éditoriale et de tests de correspondance texte–page–audio avant activation.
+- La lecture actuelle verset par verset reste disponible indépendamment du futur mode Mushaf. Ne pas afficher le mode Mushaf comme terminé avant intégration réelle des pages.
+
 ## Critères de livraison
 - FR/TR/AR/EN/DE, dont RTL arabe, et test sur petits écrans.
 - Aucune permission sensible sans action ou choix clair ; aucun secret dans le dépôt GitHub Pages.
