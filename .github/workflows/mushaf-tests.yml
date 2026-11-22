@@ -3,12 +3,16 @@ on:
   push:
     paths:
       - 'mushaf.mjs'
+      - 'vision.html'
+      - 'tests/mushaf-reader.test.mjs'
       - 'tests/mushaf.test.mjs'
       - 'tests/mushaf-security.test.mjs'
       - '.github/workflows/mushaf-tests.yml'
   pull_request:
     paths:
       - 'mushaf.mjs'
+      - 'vision.html'
+      - 'tests/mushaf-reader.test.mjs'
       - 'tests/mushaf.test.mjs'
       - '.github/workflows/mushaf-tests.yml'
 jobs:
@@ -22,4 +26,4 @@ jobs:
       - name: Validate syntax
         run: node --check mushaf.mjs && node --check tests/mushaf.test.mjs && node --check tests/mushaf-security.test.mjs
       - name: Run both Mushaf test suites
-        run: node --test tests/mushaf.test.mjs tests/mushaf-security.test.mjs
+        run: node --test tests/mushaf.test.mjs tests/mushaf-security.test.mjs tests/mushaf-reader.test.mjs
