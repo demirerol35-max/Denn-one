@@ -16,7 +16,7 @@
   edit.textContent=name?'Modifier mon prénom':'Ajouter mon prénom';panel.hidden=!!name;input.value=name;
  }
  edit.addEventListener('click',()=>{panel.hidden=!panel.hidden;if(!panel.hidden)input.focus();});
- save.addEventListener('click',()=>{const name=input.value.trim().replace(/\\s+/g,' ').slice(0,40);
+ save.addEventListener('click',()=>{const name=input.value.trim().replace(/\s+/g,' ').slice(0,40);
   if(!name){notice.textContent='Indique un prénom.';return;}
   try{localStorage.setItem(key,JSON.stringify({name}));notice.textContent='Prénom enregistré sur cet appareil.';render();}
   catch(_){notice.textContent='Impossible d’enregistrer sur cet appareil.';}
