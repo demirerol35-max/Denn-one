@@ -3,6 +3,5 @@
     <style name="DeenOneTheme" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">#073D35</item>
         <item name="android:navigationBarColor">#F7F8F3</item>
-        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>
