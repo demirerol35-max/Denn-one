@@ -6,6 +6,7 @@ export const EDITIONS=Object.freeze({
 export function validateMushafManifest(manifest,edition){
  if(!Object.hasOwn(EDITIONS,edition))throw Error('Édition inconnue');
  if(!manifest||manifest.edition!==edition)throw Error('Édition du fichier incorrecte');
+ if(!Number.isInteger(manifest.version)||manifest.version!==1)throw Error('Version du manifeste incorrecte');
  if(typeof manifest.source!=='string'||!manifest.source.trim()||typeof manifest.license!=='string'||!manifest.license.trim()||manifest.reviewed!==true)throw Error('Source, droits et validation éditoriale obligatoires');
  if(!Array.isArray(manifest.pages)||!manifest.pages.length)throw Error('Pages manquantes');
  const expected=EDITIONS[edition].expectedPages;
@@ -19,6 +20,8 @@ export function validateMushafManifest(manifest,edition){
 }
 export function nextPage(page,total,direction){
  if(!Number.isInteger(total)||total<1)throw Error('Nombre de pages incorrect');
+ if(!Number.isInteger(page)||page<1||page>total)throw Error('Page actuelle incorrecte');
+ if(direction!=='next'&&direction!=='previous')throw Error('Direction incorrecte');
  return Math.min(total,Math.max(1,Math.trunc(page||1)+(direction==='next'?1:-1)));
 }
 // SHA-256 validation checks actual page bytes, not merely the manifest's claimed hash.
