@@ -41,8 +41,11 @@
       const distance = distanceKm(lat, lon, pLat, pLon);
       if (distance > Number(radius.value)/1000) continue;
       const key = (name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'') + ':' + Math.round(pLat*10000) + ':' + Math.round(pLon*10000));
-      unique.set(key, {name, distance, lat:pLat, lon:pLon, address:
-        [tags['addr:street'],tags['addr:housenumber'],tags['addr:city']].filter(Boolean).join(' ')});
+      const street = [tags['addr:housenumber'], tags['addr:street']].filter(Boolean).join(' ');
+      const town = [tags['addr:postcode'], tags['addr:city'] || tags['addr:town'] || tags['addr:village']].filter(Boolean).join(' ');
+      const address = [street, town].filter(Boolean).join(', ') ||
+        tags['addr:full'] || tags['contact:street'] || '';
+      unique.set(key, {name, distance, lat:pLat, lon:pLon, address});
     }
     const places = [...unique.values()].sort((a,b)=>a.distance-b.distance).slice(0,30);
     if (!places.length) { message('Aucune mosquée trouvée dans ce rayon. Essaie un rayon plus grand.'); return; }
@@ -57,18 +60,11 @@
       const symbol=document.createElement('span');symbol.textContent='🕌';symbol.style.fontSize='24px';
       const info=document.createElement('div');info.style.flex='1';
       const heading = document.createElement('strong');
-      heading.textContent = '🕌 ' + place.name;
+      heading.textContent = place.name;
       const details = document.createElement('p');
       details.className = 'note';
-      details.textContent = place.distance.toFixed(1) + ' km à vol d’oiseau' +
-        (place.address ? ' · ' + place.address : '');
+      details.textContent = place.address || 'Adresse non renseignée — ouvrir Google Maps';
 
-      const directions = document.createElement('a');
-      directions.href = directionsUrl(place.lat, place.lon);
-      directions.target = '_blank';
-      directions.rel = 'noopener noreferrer';
-      directions.textContent = 'Itinéraire ↗';
-      directions.style.marginLeft = '16px';
       info.append(heading,details);
       const distanceLabel=document.createElement('span');distanceLabel.textContent=place.distance.toFixed(1)+' km ↗';
       distanceLabel.style.whiteSpace='nowrap';
