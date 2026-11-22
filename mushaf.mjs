@@ -12,7 +12,7 @@ export function validateMushafManifest(manifest,edition){
  if(expected!==null&&manifest.pages.length!==expected)throw Error('Pagination Hafs incorrecte');
  const seen=new Set();
  manifest.pages.forEach((page,index)=>{
-  if(!page||page.number!==index+1||!Number.isInteger(page.number)||typeof page.image!=='string'||!/^mushaf-assets\/[a-z0-9/_-]+\.(png|webp|jpg)$/i.test(page.image)||typeof page.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(page.sha256)||seen.has(page.image))throw Error('Page non vérifiée : '+(index+1));
+  if(!page||page.number!==index+1||!Number.isInteger(page.number)||typeof page.image!=='string'||!new RegExp('^mushaf-assets/'+edition+'/[a-z0-9_-]+\\.(png|webp|jpg)||typeof page.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(page.sha256)||seen.has(page.image))throw Error('Page non vérifiée : '+(index+1));
   seen.add(page.image);
  });
  return Object.freeze({edition,source:manifest.source,license:manifest.license,pages:manifest.pages.map(p=>Object.freeze({...p}))});
@@ -20,4 +20,22 @@ export function validateMushafManifest(manifest,edition){
 export function nextPage(page,total,direction){
  if(!Number.isInteger(total)||total<1)throw Error('Nombre de pages incorrect');
  return Math.min(total,Math.max(1,Math.trunc(page||1)+(direction==='next'?1:-1)));
+}
+,'i').test(page.image)||typeof page.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(page.sha256)||seen.has(page.image))throw Error('Page non vérifiée : '+(index+1));
+  seen.add(page.image);
+ });
+ return Object.freeze({edition,source:manifest.source,license:manifest.license,pages:manifest.pages.map(p=>Object.freeze({...p}))});
+}
+export function nextPage(page,total,direction){
+ if(!Number.isInteger(total)||total<1)throw Error('Nombre de pages incorrect');
+ return Math.min(total,Math.max(1,Math.trunc(page||1)+(direction==='next'?1:-1)));
+}
+
+// SHA-256 validation checks actual page bytes, not merely the manifest's claimed hash.
+export async function verifyPageBytes(bytes,expectedSha256){
+ if(typeof expectedSha256!=='string'||!/^[a-f0-9]{64}$/i.test(expectedSha256))return false;
+ if(!globalThis.crypto?.subtle)throw Error('SHA-256 indisponible');
+ const digest=await crypto.subtle.digest('SHA-256',bytes);
+ const actual=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
+ return actual===expectedSha256.toLowerCase();
 }
