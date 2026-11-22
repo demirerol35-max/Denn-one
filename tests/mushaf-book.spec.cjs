@@ -18,6 +18,7 @@ async function expectSpreadPainted(page){
  }).toEqual([[238,229,205],[238,229,205]]);
 }
 async function openReader(page,{edition='hafs',tamper=false}={}){
+ page.on('dialog',dialog=>dialog.accept());
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
   if(url.hostname!=='127.0.0.1')return route.abort();
@@ -53,6 +54,46 @@ test('wide-screen book has two verified pages in RTL order and advances by a spr
  await expect(page.locator('#mushaf-counter')).toHaveText('Pages 603–604 / 604');
  await expect(page.locator('#mushaf-next')).toBeDisabled();
 });
+
+test('reader labels and errors follow all five interface languages without resetting the page',async({page})=>{
+ await openReader(page,{edition:'warsh'});
+ await expect(page.locator('#mushaf-open-warsh')).toHaveText('Open Warsh');
+ await expect(page.locator('#mushaf-reader')).toHaveAttribute('aria-busy','false');
+ await page.locator('#mushaf-jump').fill('300');await page.locator('#mushaf-jump-go').click();
+ await expect(page.locator('#mushaf-reader')).toHaveAttribute('aria-busy','false');
+ for(const [language,single,caption,retry]of [
+  ['en','Single page','Page 299','Retry'],['tr','Tek sayfa','Sayfa 299','Yeniden dene'],
+  ['de','Eine Seite','Seite 299','Erneut versuchen'],['ar','صفحة واحدة','الصفحة 299','إعادة المحاولة'],['fr','Une page','Page 299','Réessayer']
+ ]){
+  await page.locator('#app-language').evaluate((select,language)=>{select.value=language;select.dispatchEvent(new Event('change',{bubbles:true}))},language);
+  await expect(page.locator('#mushaf-layout option[value="single"]')).toHaveText(single);
+  await expect(page.locator('#mushaf-caption-first')).toHaveText(caption);
+  await expect(page.locator('#mushaf-retry')).toHaveText(retry);
+  await expect(page.locator('#mushaf-jump')).toHaveValue('300');
+  await page.locator('#mushaf-jump').fill('0');await page.locator('#mushaf-jump-go').click();
+  if(language!=='fr')await expect(page.locator('#mushaf-reader-message')).not.toContainText('Choisis une page');
+  if(language==='fr')await expect(page.locator('#mushaf-reader-message')).toContainText('Choisis une page');
+  await page.locator('#mushaf-jump').fill('300');
+ }
+});
+test('reload restores the language, chosen layout and separate Hafs and Warsh positions',async({page})=>{
+ await openReader(page,{edition:'warsh'});
+ await expect(page.locator('#mushaf-reader')).toHaveAttribute('aria-busy','false');
+ await page.locator('#mushaf-layout').selectOption('single');
+ await page.locator('#mushaf-jump').fill('300');await page.locator('#mushaf-jump-go').click();
+ await expect(page.locator('#mushaf-reader')).toHaveAttribute('aria-busy','false');
+ await page.locator('#app-language').evaluate(select=>{select.value='tr';select.dispatchEvent(new Event('change',{bubbles:true}))});
+ await page.reload();
+ await page.locator('[data-tab="quran"]').first().evaluate(button=>button.click());
+ await expect(page.locator('#mushaf-layout')).toHaveValue('single');
+ await expect(page.locator('#mushaf-open-warsh')).toHaveText('Verş’i aç');
+ await page.locator('#mushaf-open-warsh').click();
+ await expect(page.locator('#mushaf-counter')).toHaveText('Sayfa 300 / 604');
+ await expect(page.locator('#mushaf-reader')).toHaveAttribute('aria-busy','false');
+ await page.locator('#mushaf-open-hafs').click();
+ await expect(page.locator('#mushaf-counter')).toHaveText('Sayfa 1 / 604');
+});
+
 test('auto layout switches to one page on mobile and preserves the requested even page',async({page})=>{
  await openReader(page,{edition:'warsh'});
  await expect(page.locator('#mushaf-reader')).toHaveAttribute('aria-busy','false');
@@ -89,4 +130,17 @@ test('a corrupt companion page blocks both images and never saves a reading posi
  expect(await page.evaluate(()=>localStorage.getItem('deen-mushaf-page-hafs'))).toBeNull();
  await expect(page.locator('#mushaf-next')).toBeDisabled();
 });
+
+test('Arabic alphabet quiz starts and accepts an answer without its former initialization error',async({page})=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await openReader(page);
+ await page.locator('[data-tab="arabic"]').first().evaluate(button=>button.click());
+ await page.locator('#deen-arabic-start').click();
+ await expect(page.locator('#deen-arabic-answers button')).toHaveCount(4);
+ await expect(page.locator('#deen-arabic-question')).toContainText(/[\u0600-\u06ff]/);
+ await page.locator('#deen-arabic-answers button').first().click();
+ await expect(page.locator('#deen-arabic-answers button')).toHaveCount(5);
+ expect(errors.filter(message=>message.includes("Cannot access 'word'"))).toEqual([]);
+});
+
 

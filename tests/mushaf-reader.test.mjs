@@ -8,7 +8,7 @@ const functionSource=name=>{const start=html.indexOf('function '+name+'(');asser
 function reader(){
  const nodes=new Map();
  const get=id=>{if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:''});return nodes.get(id)};
- const context={document:{getElementById:get},mushafReader:{hidden:false},mushafPages:Array(604),mushafPageReady:true,mushafCurrentPage:1,mushafIsDouble:()=>false,mushafModule:{mushafSpread,turnMushafSpread},mushafMsg:{textContent:''},renders:0,renderVerifiedMushaf(){context.renders++}};
+ const context={document:{getElementById:get},mushafSetMessage:()=>{},mushafReader:{hidden:false},mushafPages:Array(604),mushafPageReady:true,mushafCurrentPage:1,mushafIsDouble:()=>false,mushafModule:{mushafSpread,turnMushafSpread},mushafMsg:{textContent:''},renders:0,renderVerifiedMushaf(){context.renders++}};
  vm.createContext(context);
  vm.runInContext(functionSource('jumpMushafPage')+'\n'+functionSource('turnMushafPage'),context);
  return {context,get};
@@ -35,7 +35,8 @@ function ui(moduleOverrides={}){
   if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:'',style:{},attributes:{},listeners:{},
    addEventListener(type,handler){this.listeners[type]=handler},
    setAttribute(name,value){this.attributes[name]=value},
-   removeAttribute(name){delete this[name]},
+   getAttribute(name){return this.attributes[name]??null},
+   removeAttribute(name){delete this[name];delete this.attributes[name]},
    decode:async()=>{}
   });
   return nodes.get(id);
@@ -44,7 +45,7 @@ function ui(moduleOverrides={}){
  const module={mushafSpread,turnMushafSpread,EDITIONS:{hafs:{label:'Hafs'},warsh:{label:'Warsh'}},
   loadMushafManifest:async edition=>({manifest:fixture(edition)}),
   loadVerifiedMushafPage:async()=>({bytes:new Uint8Array([1]),fromCache:false}),...moduleOverrides};
- const c={document:{getElementById:get},AbortController,Blob,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)},
+ const c={document:{getElementById:get,querySelectorAll:()=>[],addEventListener:()=>{}},queueMicrotask,AbortController,Blob,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)},
   URL:{createObjectURL:()=> 'blob:test',revokeObjectURL:url=>revoked.push(url)},loadModule:async()=>module};
  vm.createContext(c);
  const start=html.indexOf("const mushafMsg=document.getElementById('mushaf-reader-message')");
@@ -62,7 +63,7 @@ test('switching edition cancels the previous manifest and ignores its late resul
  await c.openVerifiedMushaf('warsh');
  assert.equal(oldSignal.aborted,true);
  pending.resolve({manifest:{pages:[{number:1,image:'mushaf-assets/hafs/1.webp'}]}});await old;
- assert.equal(get('mushaf-reader-title').textContent,'Warsh');
+ assert.equal(get('mushaf-reader-title').textContent,'Warsh d’après Nâfi‘');
  assert.equal(saved.get('deen-mushaf-page-warsh'),'1');
  assert.equal(saved.has('deen-mushaf-page-hafs'),false);
 });
@@ -127,6 +128,27 @@ test('both verified pages appear together and zoom is bounded',async()=>{
  get('mushaf-zoom-reset').listeners.click();
  assert.equal(get('mushaf-page-spread').style.width,'100%');assert.equal(get('mushaf-zoom-out').disabled,true);
 });
+
+test('all reader languages preserve template parameters and live errors follow language changes',async()=>{
+ const {c,get,saved}=ui();
+ const dictionary=vm.runInContext('mushafTranslations',c),keys=Object.keys(dictionary.fr).sort();
+ const parameters=text=>(text.match(/\{\w+\}/g)||[]).sort();
+ for(const language of ['en','tr','de','ar']){
+  assert.deepEqual(Object.keys(dictionary[language]).sort(),keys);
+  for(const key of keys)assert.deepEqual(parameters(dictionary[language][key]),parameters(dictionary.fr[key]));
+ }
+ await c.openVerifiedMushaf('warsh');
+ get('mushaf-jump').value='0';c.jumpMushafPage();
+ saved.set('deen-app-language','tr');c.refreshMushafLanguage();
+ assert.equal(get('mushaf-reader-message').textContent,'1 ile 1 arasında bir sayfa seç.');
+ assert.equal(get('mushaf-page-image').alt,'Verş · sayfa 1');
+ assert.equal(get('mushaf-reader-title').textContent,'Nâfi‘den Verş');
+ saved.set('deen-app-language','ar');c.refreshMushafLanguage();
+ assert.equal(get('mushaf-page-image').alt,'ورش · الصفحة 1');
+ get('mushaf-fullscreen').listeners.click();
+ assert.equal(get('mushaf-reader-message').textContent,dictionary.ar.fullscreenUnavailable);
+});
+
 
 
 

@@ -68,4 +68,14 @@ La suite navigateur `tests/mushaf-book.spec.cjs` vérifie la disposition RTL, le
 Aucune édition n’est activée automatiquement par cette évolution.
 
 
+## Langues et reprise de lecture
+
+Les commandes, les descriptions des éditions, les textes d’accessibilité et les états du lecteur sont disponibles en français, anglais, turc, allemand et arabe. Un changement de langue met aussi à jour les messages de chargement, d’erreur et de lecture locale déjà affichés, sans recharger les pages ni changer la position de lecture.
+
+La suite navigateur vérifie les cinq langues, la conservation du choix de présentation après actualisation et la séparation des positions Hafs et Warsh. Elle suit la confirmation de changement de paramètre déjà présente dans l’application.
+
+Ces traductions et tests n’activent aucune édition non revue et ne constituent pas une validation éditoriale des pages.
+
+
+
 
