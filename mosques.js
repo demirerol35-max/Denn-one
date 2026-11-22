@@ -275,13 +275,14 @@
         }catch(_){suggestStatus.textContent='Envoi impossible pour le moment.';}
         return;
       }
-      const body=['Proposition de mosquée pour Deen One','','Nom : '+name,
-        'Emplacement / lien : '+(link||'Non fourni'),'Adresse / ville : '+(address||'Non fournie'),
-        '','Merci de vérifier les informations avant publication.'].join('\\n');
-      const url='mailto:?subject='+encodeURIComponent('Deen One - proposition de mosquée')+
-        '&body='+encodeURIComponent(body);
-      suggestStatus.textContent='Ton application e-mail va s’ouvrir. Il faudra choisir un destinataire et confirmer l’envoi. La réception directe par Deen One nécessite encore un service de collecte.';
-      window.location.href=url;
+      // Backend not configured: save a private draft, never pretend it was submitted.
+      try {
+        const key='deen-mosque-suggestion-drafts-v1';
+        const drafts=JSON.parse(localStorage.getItem(key)||'[]');
+        drafts.push({name,location:link,address,createdAt:new Date().toISOString()});
+        localStorage.setItem(key,JSON.stringify(drafts.slice(-20)));
+        suggestStatus.textContent='Proposition enregistrée sur cet appareil, mais pas encore envoyée. La réception automatique sera activée avec les comptes Deen One.';
+      } catch(_) { suggestStatus.textContent='Impossible d’enregistrer la proposition. Réessaie plus tard.'; }
     });
   }
   gps.addEventListener('click', locate);
