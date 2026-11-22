@@ -165,7 +165,8 @@ object PrayerAlarms {
             else -> return
         }
         val notification = NotificationCompat.Builder(context, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(R.drawable.deen_one_notification)
+            .setColor(0xFF075D55.toInt())
             .setContentTitle(context.getString(R.string.prayer_notification_title, localizedPrayer))
             .setContentText(context.getString(R.string.prayer_notification_body, localizedPrayer))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
