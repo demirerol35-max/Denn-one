@@ -14,21 +14,21 @@
   try{
    const sdk=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
    client=sdk.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-   const {data,error}=await client.auth.getUser();if(error)throw error;
-   user=data.user;render();
-   client.auth.onAuthStateChange((_event,session)=>{user=session?.user||null;render();});
+   const {data}=await client.auth.getSession();
+   user=data.session?.user||null;render();
+   client.auth.onAuthStateChange((_event,session)=>{const previous=user?.id;user=session?.user||null;if(previous && previous!==user?.id){try{localStorage.removeItem('deen-one-local-profile-v1');}catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));}render();});
   }catch(_){show('Connexion au service de comptes indisponible.');}
  }
  function render(){signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;
   show(user?'Connecté : '+user.email:'Connecte-toi ou crée un compte pour synchroniser ton profil.');
-  if(user)syncName();
+  if(user)syncName().catch(()=>show('Connecté, mais la synchronisation du profil est indisponible.'));
  }
  async function syncName(){
   if(!user||!client)return;
-  const local=JSON.parse(localStorage.getItem('deen-one-local-profile-v1')||'{}').name||'';
+  let local='';try{local=JSON.parse(localStorage.getItem('deen-one-local-profile-v1')||'{}').name||'';}catch(_){}
   const {data}=await client.from('profiles').select('display_name').eq('id',user.id).maybeSingle();
-  if(data?.display_name){localStorage.setItem('deen-one-local-profile-v1',JSON.stringify({name:data.display_name}));window.dispatchEvent(new Event('deen-profile-updated'));}
-  else if(local)await client.from('profiles').upsert({id:user.id,display_name:local,updated_at:new Date().toISOString()});
+  if(data?.display_name && user){localStorage.setItem('deen-one-local-profile-v1',JSON.stringify({name:data.display_name}));window.dispatchEvent(new Event('deen-profile-updated'));}
+  else if(local && user)await client.from('profiles').upsert({id:user.id,display_name:local,updated_at:new Date().toISOString()});
  }
  window.deenCloud={
   async saveName(name){if(!client||!user)return;await client.from('profiles').upsert({id:user.id,display_name:name,updated_at:new Date().toISOString()});},
