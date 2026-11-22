@@ -3,11 +3,11 @@
  const root=document.getElementById('deen-welcome');if(!root)return;
  const heading=root.querySelector('#deen-welcome-title');
  const wish=root.querySelector('#deen-welcome-wish');
- const input=root.querySelector('#deen-profile-name');
- const save=root.querySelector('#deen-profile-save');
- const edit=root.querySelector('#deen-profile-edit');
- const panel=root.querySelector('#deen-profile-panel');
- const notice=root.querySelector('#deen-profile-notice');
+ const input=document.getElementById('deen-profile-name');
+ const save=document.getElementById('deen-profile-save');
+ const edit=document.getElementById('deen-profile-edit');
+ const panel=document.getElementById('deen-profile-panel');
+ const notice=document.getElementById('deen-profile-notice');
  const key='deen-one-local-profile-v1';
  const wishes=['Qu’Allah facilite ta journée 🤲','Que cette journée t’apporte paix et sérénité 🌿','Qu’Allah bénisse tes efforts aujourd’hui 🤲','Une nouvelle journée pour apprendre et faire le bien ✨','Que la paix accompagne tes pas aujourd’hui 🌙'];
  function getName(){try{return JSON.parse(localStorage.getItem(key)||'{}').name||'';}catch(_){return '';}}
