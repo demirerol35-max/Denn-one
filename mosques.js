@@ -88,6 +88,7 @@
       node.textContent = addressCache.get(key);
       return;
     }
+    if (reverseQueue.length >= 8) { node.textContent='Adresse non disponible — voir Google Maps'; return; }
     reverseQueue.push({place,node,key});
     if (reverseRunning) return;
     reverseRunning = true;
