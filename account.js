@@ -100,7 +100,7 @@
  if(google)google.addEventListener('click',async()=>{
   if(!client)return;
   show('Ouverture de la connexion Google…');
-  const inAndroidApp=/DeenOneAndroid\\/1/.test(navigator.userAgent);
+  const inAndroidApp=navigator.userAgent.includes('DeenOneAndroid/1');
   const redirectTo=inAndroidApp?'deenone://auth/callback':window.location.origin+window.location.pathname;
   const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo,skipBrowserRedirect:false}});
   if(error)show('Connexion Google indisponible : '+error.message);
