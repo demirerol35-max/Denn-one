@@ -226,12 +226,32 @@ class MainActivity : Activity() {
         }
 
         if (savedInstanceState == null) {
-            webView.loadUrl("https://demirerol35-max.github.io/Denn-one/vision.html")
+            webView.loadUrl(oauthCallbackUrl(intent?.data) ?: "https://demirerol35-max.github.io/Denn-one/vision.html")
             // The native permission must not depend on browser Notification API
             // support or on the user discovering the reminders panel.
             webView.post { offerFirstRunNotificationConsent() }
         } else {
             webView.restoreState(savedInstanceState)
+        }
+    }
+
+    // OAuth returns through a dedicated Android deep link. Only an authorization
+    // code or OAuth error is forwarded to the trusted Deen One page; never tokens.
+    private fun oauthCallbackUrl(uri: Uri?): String? {
+        if (uri?.scheme != "deenone" || uri.host != "auth" || uri.path != "/callback") return null
+        val allowed = setOf("code", "error", "error_code", "error_description")
+        val builder = Uri.parse("https://demirerol35-max.github.io/Denn-one/vision.html").buildUpon()
+        uri.queryParameterNames.filter { it in allowed }.forEach { key ->
+            uri.getQueryParameter(key)?.let { builder.appendQueryParameter(key, it) }
+        }
+        return builder.build().toString()
+    }
+
+    override fun onNewIntent(newIntent: Intent) {
+        super.onNewIntent(newIntent)
+        setIntent(newIntent)
+        oauthCallbackUrl(newIntent.data)?.let { callback ->
+            if (::webView.isInitialized) webView.loadUrl(callback)
         }
     }
 
