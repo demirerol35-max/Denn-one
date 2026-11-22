@@ -763,7 +763,7 @@ setInterval(()=>{if(document.hidden||!lastScheduleDate||!lastScheduleTimezone)re
 </script><script>
 (()=>{const quranWords={"fr":["Verset ","★ Favori","☆ Favori","↪ Marquer ma lecture","▶ Écouter","Lecture enregistrée : sourate ","، verset ","Aucun verset trouvé pour cette recherche.","Chargement de la sourate ","Prêt pour la sourate "],"en":["Verse ","★ Favorite","☆ Favorite","↪ Save reading position","▶ Listen","Reading saved: surah ",", verse ","No verses match this search.","Loading surah ","Ready for surah "],"tr":["Ayet ","★ Favori","☆ Favori","↪ Okuma yerimi kaydet","▶ Dinle","Okuma kaydedildi: sure ",", ayet ","Aramanızla eşleşen ayet bulunamadı.","Sure yükleniyor ","Sure hazır: "],"de":["Vers ","★ Favorit","☆ Favorit","↪ Lesestelle speichern","▶ Anhören","Lesestelle gespeichert: Sure ",", Vers ","Keine Verse für diese Suche gefunden.","Sure wird geladen ","Bereit für Sure "],"ar":["الآية ","★ المفضلة","☆ المفضلة","↪ حفظ موضع القراءة","▶ استمع","تم حفظ القراءة: السورة ","، الآية ","لم يتم العثور على آيات مطابقة.","جارٍ تحميل السورة ","السورة جاهزة: "]};const qword=i=>{let lang='fr';try{lang=localStorage.getItem('deen-app-language')||'fr'}catch(e){}return (quranWords[lang]||quranWords.fr)[i]};const sel=document.querySelector('#surah'),container=document.querySelector('#verses'),status=document.querySelector('#quran-status'),search=document.querySelector('#quran-search'),favList=document.querySelector('#quran-favorites-list');let catalogueOfflineFallback=false,initialQuranRestore=true,quranRestoring=false;let current=null,ayahs=[],latinAyahs=[],frenchAyahs=[],audio=null,reciteIndex=0,reciteActive=false,recitePlayed=0,reciteTimer=null,reciteToken=0,loadToken=0,font=Number(localStorage.getItem('deen-quran-font')||30);const getFav=()=>{try{const raw=JSON.parse(localStorage.getItem('deen-quran-favorites')||'[]');return Array.isArray(raw)?raw.filter(f=>f&&Number.isInteger(Number(f.s))&&Number(f.s)>=1&&Number(f.s)<=114&&Number.isInteger(Number(f.a))&&Number(f.a)>=1).map(f=>({s:Number(f.s),a:Number(f.a)})).filter((f,i,all)=>all.findIndex(x=>x.s===f.s&&x.a===f.a)===i):[]}catch(e){return []}},saveFav=x=>localStorage.setItem('deen-quran-favorites',JSON.stringify(x));const ids={ikhlas:112,fatiha:1};function number(){return ids[sel.value]||Number(sel.value)}function selectSurah(n){sel.value=String(n);loadSurah()}const favoriteWords={fr:['Aucun favori enregistré.','Versets favoris','Sourate ',' · verset '],en:['No favorites saved.','Favorite verses','Surah ',' · verse '],tr:['Henüz favori kaydedilmedi.','Favori ayetler','Sure ',' · ayet '],de:['Noch keine Favoriten gespeichert.','Lieblingsverse','Sure ',' · Vers '],ar:['لا توجد آيات مفضلة محفوظة.','الآيات المفضلة','السورة ',' · الآية ']};
 document.getElementById('quran-edition').addEventListener('change',event=>{if(event.target.value!=='hafs'){event.target.value='hafs';document.getElementById('quran-edition-status').textContent='Warsh sera activé uniquement après vérification de son texte et de ses récitations.';}});
-const mushafMsg=document.getElementById('mushaf-reader-message'),mushafReader=document.getElementById('mushaf-reader'),mushafImage=document.getElementById('mushaf-page-image');let mushafPages=[],mushafCurrentPage=1,mushafEdition=null,mushafRequest=0,mushafBlobUrl=null;
+const mushafMsg=document.getElementById('mushaf-reader-message'),mushafReader=document.getElementById('mushaf-reader'),mushafImage=document.getElementById('mushaf-page-image');let mushafPages=[],mushafCurrentPage=1,mushafEdition=null,mushafRequest=0,mushafBlobUrl=null,mushafPageReady=false;
 function clearMushafImage(){mushafImage.removeAttribute('src');if(mushafBlobUrl){URL.revokeObjectURL(mushafBlobUrl);mushafBlobUrl=null}}
 async function openVerifiedMushaf(edition){
  const request=++mushafRequest;clearMushafImage();mushafReader.hidden=true;
@@ -785,7 +785,7 @@ async function openVerifiedMushaf(edition){
 async function renderVerifiedMushaf(){
  if(!mushafPages.length||!mushafEdition)return;
  const request=++mushafRequest,page=mushafPages[mushafCurrentPage-1],pageNumber=mushafCurrentPage;
- clearMushafImage();mushafMsg.textContent='Vérification de la page '+pageNumber+'…';
+ clearMushafImage();mushafPageReady=false;mushafMsg.textContent='Vérification de la page '+pageNumber+'…';
  document.getElementById('mushaf-counter').textContent='Page '+pageNumber+' / '+mushafPages.length;
  let pageVerified=false;
  document.getElementById('mushaf-prev').disabled=true;document.getElementById('mushaf-next').disabled=true;
@@ -797,23 +797,23 @@ async function renderVerifiedMushaf(){
   if(!await module.verifyPageBytes(bytes,page.sha256))throw Error('Empreinte SHA-256 incorrecte');
   if(request!==mushafRequest)return;
   mushafBlobUrl=URL.createObjectURL(new Blob([bytes],{type:page.image.endsWith('.png')?'image/png':page.image.endsWith('.jpg')?'image/jpeg':'image/webp'}));
-  mushafImage.src=mushafBlobUrl;pageVerified=true;mushafMsg.textContent='Page vérifiée · '+module.EDITIONS[mushafEdition].label;
+  mushafImage.src=mushafBlobUrl;pageVerified=true;mushafPageReady=true;mushafMsg.textContent='Page vérifiée · '+module.EDITIONS[mushafEdition].label;
   try{localStorage.setItem('deen-mushaf-page-'+mushafEdition,String(pageNumber))}catch(e){}
  }catch(error){if(request===mushafRequest)mushafMsg.textContent='Page '+pageNumber+' non vérifiée : affichage bloqué ('+error.message+').';}
  finally{if(request===mushafRequest){document.getElementById('mushaf-prev').disabled=!pageVerified||pageNumber===1;document.getElementById('mushaf-next').disabled=!pageVerified||pageNumber===mushafPages.length;}}
 }
 document.getElementById('mushaf-open-hafs').addEventListener('click',()=>openVerifiedMushaf('hafs'));
 document.getElementById('mushaf-open-warsh').addEventListener('click',()=>openVerifiedMushaf('warsh'));
-document.getElementById('mushaf-prev').addEventListener('click',()=>{if(mushafCurrentPage>1){mushafCurrentPage--;renderVerifiedMushaf()}});
-document.getElementById('mushaf-next').addEventListener('click',()=>{if(mushafCurrentPage<mushafPages.length){mushafCurrentPage++;renderVerifiedMushaf()}});
+document.getElementById('mushaf-prev').addEventListener('click',()=>{if(mushafPageReady&&mushafCurrentPage>1){mushafCurrentPage--;renderVerifiedMushaf()}});
+document.getElementById('mushaf-next').addEventListener('click',()=>{if(mushafPageReady&&mushafCurrentPage<mushafPages.length){mushafCurrentPage++;renderVerifiedMushaf()}});
 document.getElementById('mushaf-close').addEventListener('click',()=>{++mushafRequest;clearMushafImage();mushafReader.hidden=true;if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})});
 document.getElementById('mushaf-fullscreen').addEventListener('click',()=>{if(mushafReader.requestFullscreen)mushafReader.requestFullscreen().catch(()=>{mushafMsg.textContent='Plein écran indisponible sur cet appareil.'})});
-mushafImage.addEventListener('error',()=>{clearMushafImage();document.getElementById('mushaf-prev').disabled=true;document.getElementById('mushaf-next').disabled=true;mushafMsg.textContent='Image de page indisponible. Navigation bloquée.'});
+mushafImage.addEventListener('error',()=>{mushafPageReady=false;clearMushafImage();document.getElementById('mushaf-prev').disabled=true;document.getElementById('mushaf-next').disabled=true;mushafMsg.textContent='Image de page indisponible. Navigation bloquée.'});
 // Navigation Mushaf : geste horizontal sur la page, et touches gauche/droite si le lecteur est ouvert.
 const mushafSurface=document.getElementById('mushaf-page-surface');
 let mushafTouchStart=null;
 function turnMushafPage(direction){
- if(mushafReader.hidden||!mushafPages.length)return;
+ if(mushafReader.hidden||!mushafPages.length||!mushafPageReady)return;
  const candidate=mushafCurrentPage+(direction==='next'?1:-1);
  if(candidate<1||candidate>mushafPages.length)return;
  mushafCurrentPage=candidate;renderVerifiedMushaf();
