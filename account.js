@@ -12,6 +12,8 @@
  if(toggle)toggle.addEventListener('click',()=>{const visible=password.type==='password';password.type=visible?'text':'password';toggle.textContent=visible?'Masquer le mot de passe':'Afficher le mot de passe';toggle.setAttribute('aria-pressed',String(visible));});
  let recovering=false;
  const cloudConfigured=!!(SUPABASE_URL&&SUPABASE_PUBLISHABLE_KEY);
+ const profileOwnerKey='deen-one-profile-owner-v1';
+ let syncInFlight=false;
  let client=null,user=null;
  const show=(msg)=>{status.textContent=msg;};
  if(!cloudConfigured){show('Compte synchronisé en préparation. Ton prénom reste enregistré sur cet appareil.');signIn.disabled=true;signUp.disabled=true;if(google)google.disabled=true;if(reset)reset.disabled=true;email.disabled=true;password.disabled=true;signOut.hidden=true;return;}
@@ -20,20 +22,30 @@
    const sdk=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
    client=sdk.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
    const {data}=await client.auth.getSession();
-   user=data.session?.user||null;render();
-   client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;password.disabled=false;password.value='';show('Choisis un nouveau mot de passe (8 caractères minimum), puis confirme.');}const previous=user?.id;user=session?.user||null;if(previous && previous!==user?.id){try{localStorage.removeItem('deen-one-local-profile-v1');}catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));}render();});
+   user=data.session?.user||null;if(user)switchProfile(null,user.id);render();
+   client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;password.disabled=false;password.value='';show('Choisis un nouveau mot de passe (8 caractères minimum), puis confirme.');}const previous=user?.id;user=session?.user||null;if(previous!==user?.id){switchProfile(previous,user?.id);}render();});
   }catch(_){show('Connexion au service de comptes indisponible.');}
+ }
+ function switchProfile(previous,next){
+  try{const storedOwner=localStorage.getItem(profileOwnerKey);
+   if((storedOwner && storedOwner!==next)||(previous && previous!==next))localStorage.removeItem('deen-one-local-profile-v1');
+   if(next)localStorage.setItem(profileOwnerKey,next);else localStorage.removeItem(profileOwnerKey);
+  }catch(_){}window.dispatchEvent(new Event('deen-profile-updated'));
  }
  function render(){if(recovering){signOut.hidden=false;signIn.hidden=true;signUp.hidden=true;if(google)google.hidden=true;if(reset){reset.hidden=false;reset.textContent='Confirmer le nouveau mot de passe';}return;}signOut.hidden=!user;signIn.hidden=!!user;signUp.hidden=!!user;if(reset)reset.hidden=!!user;if(google)google.hidden=!!user;
   show(user?'Connecté : '+user.email:'Connecte-toi ou crée un compte pour synchroniser ton profil.');
   if(user)syncName().catch(()=>show('Connecté, mais la synchronisation du profil est indisponible.'));
  }
  async function syncName(){
-  if(!user||!client)return;
+  if(!user||!client||syncInFlight)return;
+  syncInFlight=true;const owner=user.id;
+  try{
   let local='';try{local=JSON.parse(localStorage.getItem('deen-one-local-profile-v1')||'{}').name||'';}catch(_){}
   const {data}=await client.from('profiles').select('display_name').eq('id',user.id).maybeSingle();
+  if(user?.id!==owner)return;
   if(data?.display_name && user){localStorage.setItem('deen-one-local-profile-v1',JSON.stringify({name:data.display_name}));window.dispatchEvent(new Event('deen-profile-updated'));}
   else if(local && user)await client.from('profiles').upsert({id:user.id,display_name:local,updated_at:new Date().toISOString()});
+  }finally{syncInFlight=false;}
  }
  window.deenCloud={
   async saveName(name){if(!client||!user)return;await client.from('profiles').upsert({id:user.id,display_name:name,updated_at:new Date().toISOString()});},
