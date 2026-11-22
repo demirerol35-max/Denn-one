@@ -67,48 +67,21 @@
       directions.rel = 'noopener noreferrer';
       directions.textContent = 'Itinéraire ↗';
       directions.style.marginLeft = '16px';
-      article.append(heading, details, link, directions);
+      article.append(heading, details, directions);
       results.append(article);
     }
-  }
-  function showMap(lat, lon) {
-    let panel = root.querySelector('#mosque-map-panel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'mosque-map-panel';
-      panel.style.margin = '16px 0';
-      results.before(panel);
-    }
-    panel.replaceChildren();
-    const heading = document.createElement('strong');
-    heading.textContent = '🗺️ Carte des mosquées';
-    const frame = document.createElement('iframe');
-    frame.title = 'Carte des mosquées à proximité';
-    frame.loading = 'eager';
-    frame.referrerPolicy = 'no-referrer-when-downgrade';
-    frame.style.cssText = 'display:block;width:100%;height:340px;border:0;border-radius:14px;margin:12px 0';
-    frame.src = 'https://maps.google.com/maps?q=' +
-      encodeURIComponent('mosquées près de ' + lat + ',' + lon) + '&z=13&output=embed';
-    const link = document.createElement('a');
-    link.href = 'https://www.google.com/maps/search/?api=1&query=' +
-      encodeURIComponent('mosquées près de ' + lat + ',' + lon);
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = 'Ouvrir les mosquées dans Google Maps ↗';
-    panel.append(heading, frame, link);
   }
   async function search(lat, lon) {
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
       message('Coordonnées invalides. Choisis une ville ou réessaie le GPS.'); return;
     }
-    showMap(lat, lon);
     lastPosition = {lat, lon};
     lastSearchAt = Date.now();
     if (activeController) activeController.abort();
     const controller = new AbortController();
     activeController = controller;
     results.replaceChildren();
-    message('Carte chargée ci-dessous. Recherche de la liste détaillée des mosquées…');
+    message('Recherche des mosquées à proximité…');
     const timeout = setTimeout(() => controller.abort(), 24000);
     const query = '[out:json][timeout:12];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + ');nwr["building"="mosque"](around:' +
@@ -127,11 +100,25 @@
           if (controller.signal.aborted) throw error;
         }
       }
+      if (!data) {
+        const km = Number(radius.value)/1000;
+        const dLat = km/111.2, dLon = km/(111.2*Math.max(0.2,Math.cos(lat*Math.PI/180)));
+        const viewbox = [lon-dLon,lat+dLat,lon+dLon,lat-dLat].join(',');
+        const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&bounded=1&limit=40&q=mosque&viewbox=' + encodeURIComponent(viewbox);
+        const response = await fetch(url,{signal:controller.signal});
+        if(response.ok) {
+          const found = await response.json();
+          if(Array.isArray(found)) data={elements:found.map((x,i)=>({
+            type:'node',id:x.place_id||i,lat:Number(x.lat),lon:Number(x.lon),
+            tags:{name:x.name||x.display_name?.split(',')[0]||'Mosquée'}
+          }))};
+        }
+      }
       if (!data) throw new Error('Aucun serveur disponible');
       if (activeController === controller) showPlaces(data,lat,lon);
     } catch (error) {
       if (activeController === controller)
-        { message('La liste détaillée est indisponible. Utilise la carte et son lien Google Maps ci-dessus.'); const link=document.createElement('a'); link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('mosquée près de '+lat+','+lon);link.target='_blank';link.rel='noopener noreferrer';link.textContent='🕌 Voir les mosquées sur Google Maps ↗';results.replaceChildren(link); }
+        { message('La liste est indisponible pour le moment. Tu peux réessayer.'); const link=document.createElement('a'); link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('mosquée près de '+lat+','+lon);link.target='_blank';link.rel='noopener noreferrer';link.textContent='🕌 Voir les mosquées sur Google Maps ↗';results.replaceChildren(link); }
     } finally {
       clearTimeout(timeout);
       if (activeController === controller) activeController = null;
