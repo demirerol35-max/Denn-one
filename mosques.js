@@ -13,6 +13,10 @@
   let lastSearchAt = 0;
   let gpsPending = false;
   const cache = new Map();
+  try {
+    const stored=JSON.parse(localStorage.getItem('deen-mosques-cache-v1')||'[]');
+    for(const entry of stored) if(entry && entry.key && entry.data && Date.now()-entry.at<7*86400000) cache.set(entry.key,{at:entry.at,data:entry.data});
+  } catch (_) {}
   let lastSuccessful = null;
   const addressCache = new Map();
 
@@ -131,7 +135,8 @@
     if (!lastSuccessful) results.replaceChildren();
     const cacheKey=[lat.toFixed(2),lon.toFixed(2),radius.value].join(':');
     const saved=cache.get(cacheKey);
-    if(saved && Date.now()-saved.at<15*60*1000){showPlaces(saved.data,lat,lon);activeController=null;return;}
+    if(saved && Date.now()-saved.at<30*60*1000){showPlaces(saved.data,lat,lon);activeController=null;return;}
+    if(saved) {showPlaces(saved.data,lat,lon);message('Dernière liste disponible. Actualisation en cours…');}
     message(lastSuccessful ? 'Actualisation des mosquées en cours…' : 'Recherche des mosquées à proximité…');
     const around='(around:'+Number(radius.value)+','+lat+','+lon+')';
     const query = '[out:json][timeout:15];('+
@@ -168,11 +173,28 @@
         }
       });
       try { data = await Promise.any(requests); } catch (_) { data = null; }
+      if (!data) {
+        const simple='[out:json][timeout:15];nwr["amenity"="place_of_worship"]["religion"="muslim"]'+around+';out center;';
+        const attempts=endpoints.map(async endpoint=>{
+          const c=new AbortController();
+          const timer=setTimeout(()=>c.abort(),8000);
+          try {
+            const response=await fetch(endpoint+'?data='+encodeURIComponent(simple),{signal:c.signal});
+            if(!response.ok) throw new Error('HTTP '+response.status);
+            const value=await response.json();
+            if(!Array.isArray(value.elements)) throw new Error('Invalid response');
+            return value;
+          } finally {clearTimeout(timer);}
+        });
+        try {data=await Promise.any(attempts);} catch (_) {}
+      }
       if (!data) throw new Error('Aucun serveur disponible');
-      if (activeController === controller) {cache.set(cacheKey,{at:Date.now(),data});showPlaces(data,lat,lon);}
+      if (activeController === controller) {cache.set(cacheKey,{at:Date.now(),data});
+        try { localStorage.setItem('deen-mosques-cache-v1',JSON.stringify([...cache].slice(-12).map(([key,v])=>({key,at:v.at,data:v.data})))); } catch (_) {}
+        showPlaces(data,lat,lon);}
     } catch (error) {
       if (activeController === controller)
-        { message(lastSuccessful ? 'Actualisation indisponible : dernière liste conservée.' : 'La liste est indisponible pour le moment. Tu peux réessayer.'); if (!lastSuccessful) { const link=document.createElement('a'); link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('mosquée près de '+lat+','+lon);link.target='_blank';link.rel='noopener noreferrer';link.textContent='🕌 Voir les mosquées sur Google Maps ↗';results.replaceChildren(link); } }
+        { message((lastSuccessful || saved) ? 'Service temporairement indisponible : dernière liste conservée.' : 'La liste est indisponible pour le moment. Tu peux réessayer.'); if (!lastSuccessful && !saved) { const link=document.createElement('a'); link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('mosquée près de '+lat+','+lon);link.target='_blank';link.rel='noopener noreferrer';link.textContent='🕌 Voir les mosquées sur Google Maps ↗';results.replaceChildren(link); } }
     } finally {
       if (activeController === controller) activeController = null;
     }
