@@ -1,4 +1,4 @@
-/* Deen One — nearby mosques, OpenStreetMap data; location is requested only by the user. */
+/* Deen One — nearby mosques, OpenStreetMap data. Opening the dedicated section initiates a GPS request. */
 (() => {
   const root = document.getElementById('mosques');
   if (!root) return;
@@ -9,6 +9,9 @@
   const city = root.querySelector('#mosque-city');
   const searchCity = root.querySelector('#mosque-city-search');
   let activeController = null;
+  let lastPosition = null;
+  let lastSearchAt = 0;
+  let gpsPending = false;
 
   function message(value) { status.textContent = value; }
   function distanceKm(lat1, lon1, lat2, lon2) {
@@ -69,38 +72,68 @@
     }
   }
   async function search(lat, lon) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      message('Coordonnées invalides. Choisis une ville ou réessaie le GPS.'); return;
+    }
+    lastPosition = {lat, lon};
+    lastSearchAt = Date.now();
     if (activeController) activeController.abort();
     const controller = new AbortController();
     activeController = controller;
     results.replaceChildren();
     message('Recherche des mosquées à proximité…');
     const timeout = setTimeout(() => controller.abort(), 18000);
-    const query = '[out:json][timeout:15];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
+    const query = '[out:json][timeout:12];(nwr["amenity"="place_of_worship"]["religion"="muslim"](around:' +
+      Number(radius.value) + ',' + lat + ',' + lon + ');nwr["building"="mosque"](around:' +
       Number(radius.value) + ',' + lat + ',' + lon + '););out center;';
     try {
-      const response = await fetch('https://overpass-api.de/api/interpreter', {
-        method:'POST', body:new URLSearchParams({data:query}), signal:controller.signal
-      });
-      if (!response.ok) throw new Error('Service temporairement indisponible');
-      const data = await response.json();
+      let data = null;
+      for (const endpoint of ['https://overpass.kumi.systems/api/interpreter', 'https://overpass.nchc.org.tw/api/interpreter', 'https://overpass-api.de/api/interpreter']) {
+        try {
+          const response = await fetch(endpoint, {
+            method:'POST', body:new URLSearchParams({data:query}), signal:controller.signal
+          });
+          if (!response.ok) continue;
+          data = await response.json();
+          break;
+        } catch (error) {
+          if (controller.signal.aborted) throw error;
+        }
+      }
+      if (!data) throw new Error('Aucun serveur disponible');
       if (activeController === controller) showPlaces(data,lat,lon);
     } catch (error) {
       if (activeController === controller)
-        message('Recherche indisponible pour le moment. Vérifie la connexion puis réessaie.');
+        message('Le service cartographique ne répond pas. Réessaie ou utilise la recherche par ville.');
     } finally {
       clearTimeout(timeout);
       if (activeController === controller) activeController = null;
     }
   }
-  gps.addEventListener('click', () => {
-    if (!navigator.geolocation) { message('GPS non disponible sur cet appareil. Utilise la recherche par ville.'); return; }
-    message('En attente de ton autorisation de localisation…');
+  function locate() {
+    if (gpsPending) return;
+    if (!navigator.geolocation) {
+      message('GPS non disponible. Utilise la recherche par ville.');
+      return;
+    }
+    gpsPending = true;
+    message('Recherche automatique des mosquées : localisation en cours…');
     navigator.geolocation.getCurrentPosition(
-      p => search(p.coords.latitude,p.coords.longitude),
-      () => message('Localisation refusée ou indisponible. Tu peux rechercher une ville.'),
+      p => { gpsPending = false; search(p.coords.latitude, p.coords.longitude); },
+      () => { gpsPending = false; message('Localisation indisponible ou refusée. Saisis une ville ci-dessus.'); },
       {enableHighAccuracy:false, timeout:12000, maximumAge:60000}
     );
+  }
+  gps.addEventListener('click', locate);
+  radius.addEventListener('change', () => { if (lastPosition) search(lastPosition.lat, lastPosition.lon); });
+  // The page is a single-page app. Observe its hidden state rather than
+  // relying on document load or the browser hash to detect navigation.
+  const observer = new MutationObserver(() => {
+    if (root.hidden) return;
+    if (!lastPosition || Date.now() - lastSearchAt > 5 * 60 * 1000) locate();
   });
+  observer.observe(root, {attributes:true, attributeFilter:['hidden']});
+  if (!root.hidden) locate();
   searchCity.addEventListener('click', async () => {
     const value = city.value.trim();
     if (value.length < 2) { message('Indique une ville et, si nécessaire, un pays.'); return; }
