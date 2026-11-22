@@ -1,0 +1,33 @@
+name: Mushaf security checks
+
+on:
+  push:
+    paths:
+      - 'mushaf.mjs'
+      - 'tests/mushaf-security.test.mjs'
+      - '.github/workflows/mushaf-security.yml'
+  pull_request:
+    paths:
+      - 'mushaf.mjs'
+      - 'tests/mushaf-security.test.mjs'
+      - '.github/workflows/mushaf-security.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mushaf-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: node --check mushaf.mjs && node --check tests/mushaf-security.test.mjs
+      - name: Run Mushaf tests
+        run: node --test tests/mushaf-security.test.mjs
