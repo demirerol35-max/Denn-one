@@ -130,3 +130,19 @@ test('deadline rejects stalled fetch adapters and JSON parsers that ignore abort
  await assert.rejects(fetchQuranJSON('/meta',{fetcher:never,timeoutMs:15}),{name:'TimeoutError'});
  await assert.rejects(fetchQuranJSON('/meta',{fetcher:async()=>({ok:true,json:never}),timeoutMs:15}),{name:'TimeoutError'});
 });
+
+
+test('manual cancellation settles even when the fetch adapter ignores AbortSignal',async()=>{
+ const controller=new AbortController();
+ const pending=fetchQuranJSON('/meta',{fetcher:()=>new Promise(()=>{}),signal:controller.signal,timeoutMs:1000});
+ controller.abort();
+ await assert.rejects(pending,{name:'AbortError'});
+});
+
+test('invalid request timeouts are rejected before any network activity',async()=>{
+ let calls=0;
+ for(const timeoutMs of [0,-1,NaN,Infinity,1.5,60001]){
+  await assert.rejects(fetchQuranJSON('/meta',{timeoutMs,fetcher:()=>{calls++;throw Error('Unexpected network call')}}),/Invalid timeout/);
+ }
+ assert.equal(calls,0);
+});
