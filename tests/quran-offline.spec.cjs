@@ -29,14 +29,14 @@ async function choose(page,n){await page.locator('#surah').selectOption(String(n
 async function save(page){await expect(page.locator('#quran-offline-save')).toBeEnabled();await page.locator('#quran-offline-save').click();await expect(page.locator('#quran-offline-message')).toContainText('saved on this device');}
 
 test('explicit save survives a truly offline reload, restores reading position, and can be deleted',async({page,context})=>{
- await openQuran(page);await choose(page,18);
+ const state={};await openQuran(page,state);await choose(page,18);
  expect(await page.evaluate(async()=> (await caches.open('deen-quran-text-v1')).keys().then(keys=>keys.length))).toBe(0);
  await save(page);
  await expect(page.locator('#quran-text-source')).toContainText('Muhammad Hamidullah');
  await page.locator('#ayah-18-3 .quran-actions button').nth(1).click();
  await page.evaluate(async()=>{await navigator.serviceWorker.ready});
  await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker.controller))).toBe(true);
- await context.setOffline(true);await page.reload();
+ state.offline=true;await context.setOffline(true);await page.reload();
  await page.locator('[data-tab="quran"]').first().evaluate(button=>button.click());
  await expect(page.locator('#quran-status')).toContainText('local copy');
  await expect(page.locator('#surah')).toHaveValue('18');
@@ -57,13 +57,13 @@ test('saved translation languages are distinct and an unavailable language is ne
  state.offline=true;
  await page.locator('#quran-translation-language').selectOption('de');
  await expect(page.locator('#quran-status')).toContainText('no copy');
- await expect(page.locator('.quran-french-line')).toHaveCount(0);
+ await expect(page.locator('#verses .quran-french-line')).toHaveCount(0);
  await page.locator('#quran-offline-list').selectOption('18:fr');await page.locator('#quran-offline-open').click();
  await expect(page.locator('#quran-status')).toContainText('local copy');
  await expect(page.locator('#quran-translation-language')).toHaveValue('fr');
- await expect(page.locator('.quran-french-line').first()).toContainText('fr.hamidullah');
+ await expect(page.locator('#verses .quran-french-line').first()).toContainText('fr.hamidullah');
  await page.locator('#quran-offline-list').selectOption('18:tr');await page.locator('#quran-offline-open').click();
- await expect(page.locator('.quran-french-line').first()).toContainText('tr.diyanet');
+ await expect(page.locator('#verses .quran-french-line').first()).toContainText('tr.diyanet');
 });
 
 test('corrupted copies are rejected, remain removable and never replace text',async({page})=>{
@@ -81,8 +81,8 @@ test('partial editions disable saving while Arabic remains readable',async({page
  await openQuran(page,{partial:true});
  await expect(page.locator('#quran-offline-save')).toBeDisabled();
  await expect(page.locator('#quran-status')).toContainText('some editions are unavailable');
- await expect(page.locator('.quran-ayah-text')).toHaveCount(4);
- await expect(page.locator('.quran-french-line')).toHaveCount(0);
+ await expect(page.locator('#verses .quran-ayah-text')).toHaveCount(4);
+ await expect(page.locator('#verses .quran-french-line')).toHaveCount(0);
 });
 
 test('quota errors never claim success and do not interrupt reading',async({page})=>{
@@ -90,7 +90,7 @@ test('quota errors never claim success and do not interrupt reading',async({page
  await page.evaluate(()=>{const put=Cache.prototype.put;Cache.prototype.put=function(request,response){if(String(request).includes('quran-offline/'))return Promise.reject(new DOMException('Full','QuotaExceededError'));return put.call(this,request,response)}});
  await page.locator('#quran-offline-save').click();
  await expect(page.locator('#quran-offline-message')).toContainText('Unable to save');
- await expect(page.locator('.quran-ayah-text')).toHaveCount(4);
+ await expect(page.locator('#verses .quran-ayah-text')).toHaveCount(4);
  await expect(page.locator('#quran-offline-list option')).toHaveCount(1);
 });
 
@@ -109,9 +109,9 @@ test('a delayed translation for a previous surah cannot overwrite the selected o
  const state={hold:{surah:18,edition:'fr.hamidullah',promise}};
  await openQuran(page,state);
  await page.locator('#surah').selectOption('18');
- await expect(page.locator('.quran-ayah-text').first()).toContainText('Fixture 18');
+ await expect(page.locator('#verses .quran-ayah-text').first()).toContainText('Fixture 18');
  await choose(page,19);release();
- await expect(page.locator('.quran-french-line').first()).toContainText('Fixture 19 fr.hamidullah');
+ await expect(page.locator('#verses .quran-french-line').first()).toContainText('Fixture 19 fr.hamidullah');
  await save(page);
  await expect(page.locator('#quran-offline-list option[value="19:fr"]')).toHaveCount(1);
  await expect(page.locator('#quran-offline-list option[value="18:fr"]')).toHaveCount(0);
