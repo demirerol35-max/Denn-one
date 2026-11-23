@@ -123,3 +123,10 @@ test('API path guard permits only supported surahs and text editions',async()=>{
  }
  assert.equal(calls.length,4,'Rejected paths must never reach the network');
 });
+
+
+test('deadline rejects stalled fetch adapters and JSON parsers that ignore abort',async()=>{
+ const never=()=>new Promise(()=>{});
+ await assert.rejects(fetchQuranJSON('/meta',{fetcher:never,timeoutMs:15}),{name:'TimeoutError'});
+ await assert.rejects(fetchQuranJSON('/meta',{fetcher:async()=>({ok:true,json:never}),timeoutMs:15}),{name:'TimeoutError'});
+});
