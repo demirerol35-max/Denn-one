@@ -56,6 +56,7 @@ export async function fetchQuranJSON(path, {fetcher = globalThis.fetch, signal, 
       throw Error('Invalid API path');
     }
   }
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60000) throw Error('Invalid timeout');
   checkAbort(signal);
   const controller = new AbortController();
   const abort = () => controller.abort(signal.reason);
