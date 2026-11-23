@@ -109,3 +109,17 @@ test('catalogue accepts only the complete sequential list and ignores extra fiel
  assert.throws(()=>validateQuranCatalogue(list.slice(1)));
  list[1].number=1;assert.throws(()=>validateQuranCatalogue(list));
 });
+
+
+test('API path guard permits only supported surahs and text editions',async()=>{
+ const calls=[];
+ const fetcher=async url=>{calls.push(url);return Response.json({code:200,data:{ok:true}})};
+ for(const path of ['/surah/1/ar.alafasy','/surah/114/en.transliteration','/surah/112/fr.hamidullah','/surah/2/tr.diyanet']){
+  assert.deepEqual(await fetchQuranJSON(path,{fetcher}),{ok:true});
+ }
+ assert.equal(calls.length,4);
+ for(const path of ['/surah/0/ar.alafasy','/surah/115/ar.alafasy','/surah/1/evil.edition','/surah/1/ar.warsh','/surah/1/fr.hamidullah?extra=1','/surah/001/fr.hamidullah']){
+  await assert.rejects(fetchQuranJSON(path,{fetcher}),/Invalid API path/);
+ }
+ assert.equal(calls.length,4,'Rejected paths must never reach the network');
+});
