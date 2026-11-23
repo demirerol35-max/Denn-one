@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
+import {runInNewContext} from 'node:vm';
 import {QURAN_API,QURAN_TEXT_CACHE,MAX_SAVED_SURAHS,TRANSLATIONS,validateQuranEdition,validateQuranCatalogue,fetchQuranJSON,createSavedSurah,saveSurahOffline,readSurahOffline,listSavedSurahs,deleteSurahOffline} from '../quran-offline.mjs';
 
 function storage() {
@@ -155,4 +156,26 @@ test('service worker activation preserves offline Quran text caches',async()=>{
  assert.doesNotMatch(worker,/key\.startsWith\('deen-one-'\)/);
  assert.equal(QURAN_TEXT_CACHE,'deen-quran-text-v1');
  assert.equal(QURAN_TEXT_CACHE.startsWith('deen-one-shell-'),false);
+});
+
+
+test('service worker activation deletes old shells but retains saved Quran and unrelated caches',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const names=['deen-one-shell-v17','deen-one-shell-v18',QURAN_TEXT_CACHE,'other-app-cache'];
+ const removed=[];
+ const handlers={};
+ let claimed=false;
+ const self={
+  registration:{scope:'https://example.org/Denn-one/'},
+  location:{origin:'https://example.org'},
+  clients:{claim:async()=>{claimed=true;}},
+  addEventListener:(name,handler)=>{handlers[name]=handler;}
+ };
+ const caches={keys:async()=>names,delete:async(name)=>{removed.push(name);return true;}};
+ runInNewContext(worker,{self,caches,URL,Request,Response,console,Date,Set,Promise});
+ let completion;
+ handlers.activate({waitUntil:(promise)=>{completion=promise;}});
+ await completion;
+ assert.deepEqual(removed,['deen-one-shell-v17']);
+ assert.equal(claimed,true);
 });
