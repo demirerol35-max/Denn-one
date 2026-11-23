@@ -49,7 +49,13 @@ export function validateQuranCatalogue(entries) {
 }
 
 export async function fetchQuranJSON(path, {fetcher = globalThis.fetch, signal, timeoutMs = 10000} = {}) {
-  if (path !== '/meta' && !/^\/surah\/(?:[1-9]|[1-9][0-9]|1[01][0-9])\/[a-z]+\.[a-z]+$/.test(path)) throw Error('Invalid API path');
+  if (path !== '/meta') {
+    const match = /^\/surah\/([1-9][0-9]{0,2})\/([a-z]+\.[a-z]+)$/.exec(path);
+    if (!match || !validSurah(Number(match[1])) ||
+        !['ar.alafasy', 'en.transliteration', ...Object.values(TRANSLATIONS)].includes(match[2])) {
+      throw Error('Invalid API path');
+    }
+  }
   checkAbort(signal);
   const controller = new AbortController();
   const abort = () => controller.abort(signal.reason);
