@@ -1,0 +1,49 @@
+name: Quran offline reading
+on:
+  push:
+    paths:
+      - 'vision.html'
+      - 'quran-offline.mjs'
+      - 'service-worker.js'
+      - 'tests/quran-offline*'
+      - 'playwright.quran.config.cjs'
+      - '.github/workflows/quran-offline.yml'
+  pull_request:
+    paths:
+      - 'vision.html'
+      - 'quran-offline.mjs'
+      - 'service-worker.js'
+      - 'tests/quran-offline*'
+      - 'playwright.quran.config.cjs'
+      - '.github/workflows/quran-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate classic-reader storage and web scripts
+        run: |
+          node --check quran-offline.mjs
+          node scripts/check-prayer-week.mjs
+          node --test tests/quran-offline.test.mjs
+      - run: npm install --no-save --package-lock=false @playwright/test@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - name: Exercise saving, offline reload, translations and deletion
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/deen-quran-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          npx playwright test --config playwright.quran.config.cjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: quran-offline-browser-diagnostics
+          path: test-results/
+          if-no-files-found: ignore

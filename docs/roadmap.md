@@ -4,7 +4,7 @@
 
 ## P0 — Fiabilité indispensable avant publication
 1. **Notifications Android en arrière-plan** — Service worker de réception existant ; planificateur et tests ajoutés. À construire : API d'abonnement HTTPS, stockage chiffré/protégé, clé VAPID serveur, tâche planifiée, révocation, contrôle des doublons et tests sur appareil fermé. Ne jamais promettre de son Adhan automatique en arrière-plan dans la PWA.
-2. **Lecture du Coran hors connexion** — Le cache actuel ne couvre que la coque statique, pas le texte/audio coranique. Fournir des packs de sourates téléchargeables volontairement, versionnés, avec origine et licence vérifiées, estimation d'espace, suppression et vérification d'intégrité. Aucun stockage automatique de données personnelles.
+2. **Lecture du Coran hors connexion** — Enregistrement volontaire de la sourate affichée avec arabe, translittération et traduction choisie ; liste, réouverture, estimation de taille, suppression et contrôle d’intégrité. Maximum 20 copies locales, sans téléchargement audio. Voir `docs/quran-offline.md`. Les pages Mushaf conservent un cache distinct de 12 pages, qui ne sera utilisable qu’après publication d’éditions revues. À poursuivre : packs audio et essais sur appareil réel. Aucun stockage automatique de données personnelles.
 3. **Sauvegarde privée des progrès** — Export/import local chiffré par phrase secrète (Web Crypto), sans serveur ni compte ; inclure schéma/version, contrôle de validité et confirmation avant remplacement. Ne pas inclure localisation GPS ni abonnement push.
 
 ## P1 — Usage quotidien
