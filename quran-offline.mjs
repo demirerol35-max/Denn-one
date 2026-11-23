@@ -61,14 +61,28 @@ export async function fetchQuranJSON(path, {fetcher = globalThis.fetch, signal, 
   const abort = () => controller.abort(signal.reason);
   signal?.addEventListener('abort', abort, {once:true});
   const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), timeoutMs);
+  // Race the whole request (including JSON decoding) against the deadline.
+  // Some fetch adapters ignore AbortSignal; a timeout must still settle the caller.
+  let onAbort;
+  const aborted = new Promise((_, reject) => {
+    onAbort = () => reject(controller.signal.reason || new DOMException('Aborted', 'AbortError'));
+    controller.signal.addEventListener('abort', onAbort, {once:true});
+    if (controller.signal.aborted) onAbort();
+  });
   try {
-    const response = await fetcher(QURAN_API + path, {signal:controller.signal});
-    if (!response.ok) throw Error('API unavailable');
-    const json = await response.json();
-    checkAbort(signal);
-    if (json?.code !== 200) throw Error('API unavailable');
-    return json.data;
-  } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
+    return await Promise.race([(async () => {
+      const response = await fetcher(QURAN_API + path, {signal:controller.signal});
+      if (!response.ok) throw Error('API unavailable');
+      const json = await response.json();
+      checkAbort(controller.signal);
+      if (json?.code !== 200) throw Error('API unavailable');
+      return json.data;
+    })(), aborted]);
+  } finally {
+    clearTimeout(timer);
+    controller.signal.removeEventListener('abort', onAbort);
+    signal?.removeEventListener('abort', abort);
+  }
 }
 
 export function createSavedSurah({surah, language, arabic, transliteration, translation}) {
