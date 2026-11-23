@@ -17,7 +17,7 @@ self.addEventListener('install', event => {
 });
 self.addEventListener('activate', event => {
   event.waitUntil(Promise.all([
-    caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('deen-one-') && key !== CACHE).map(key => caches.delete(key)))),
+    caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('deen-one-shell-') && key !== CACHE).map(key => caches.delete(key)))),
     self.clients.claim()
   ]));
 });
