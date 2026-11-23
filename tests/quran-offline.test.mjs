@@ -153,6 +153,6 @@ test('service worker activation preserves offline Quran text caches',async()=>{
  const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
  assert.match(worker,/key\.startsWith\('deen-one-shell-'\)/);
  assert.doesNotMatch(worker,/key\.startsWith\('deen-one-'\)/);
- assert.ok(QURAN_TEXT_CACHE.startsWith('deen-one-'));
+ assert.equal(QURAN_TEXT_CACHE,'deen-quran-text-v1');
  assert.equal(QURAN_TEXT_CACHE.startsWith('deen-one-shell-'),false);
 });
