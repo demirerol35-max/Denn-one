@@ -46,6 +46,7 @@ test('explicit save survives a truly offline reload, restores reading position, 
  await expect(page.locator('#ayah-18-3')).toBeInViewport();
  await page.locator('#quran-offline-list').selectOption('18:fr');await page.locator('#quran-offline-delete').click();
  await expect(page.locator('#quran-offline-message')).toHaveText('Copy deleted.');
+ await expect(page.locator('#quran-offline-list')).toHaveValue('');
  await choose(page,19);await choose(page,18);
  await expect(page.locator('#verses .quran-ayah')).toHaveCount(0);
  await expect(page.locator('#quran-status')).toContainText('no copy');

@@ -1298,7 +1298,7 @@ function renderOfflineControls(){
  select.replaceChildren();
  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=offlineText(quranOfflineEntries.length?'savedList':'empty');select.append(placeholder);
  for(const entry of quranOfflineEntries){const option=document.createElement('option');option.value=entry.surah+':'+entry.language;option.textContent=entry.surah+' · '+(entry.name||'—')+' · '+entry.language.toUpperCase()+(entry.valid?'':' ⚠');select.append(option)}
- select.value=previous;
+ select.value=quranOfflineEntries.some(entry=>entry.surah+':'+entry.language===previous)?previous:'';
  select.disabled=quranOfflineBusy||!quranOfflineEntries.length;
  const entry=quranOfflineEntries.find(item=>item.surah+':'+item.language===select.value);
  document.getElementById('quran-offline-open').disabled=quranOfflineBusy||!entry?.valid;
