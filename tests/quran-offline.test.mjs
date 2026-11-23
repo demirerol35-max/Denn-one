@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
 import {QURAN_API,QURAN_TEXT_CACHE,MAX_SAVED_SURAHS,TRANSLATIONS,validateQuranEdition,validateQuranCatalogue,fetchQuranJSON,createSavedSurah,saveSurahOffline,readSurahOffline,listSavedSurahs,deleteSurahOffline} from '../quran-offline.mjs';
 
 function storage() {
@@ -145,4 +146,13 @@ test('invalid request timeouts are rejected before any network activity',async()
   await assert.rejects(fetchQuranJSON('/meta',{timeoutMs,fetcher:()=>{calls++;throw Error('Unexpected network call')}}),/Invalid timeout/);
  }
  assert.equal(calls,0);
+});
+
+
+test('service worker activation preserves offline Quran text caches',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ assert.match(worker,/key\.startsWith\('deen-one-shell-'\)/);
+ assert.doesNotMatch(worker,/key\.startsWith\('deen-one-'\)/);
+ assert.ok(QURAN_TEXT_CACHE.startsWith('deen-one-'));
+ assert.equal(QURAN_TEXT_CACHE.startsWith('deen-one-shell-'),false);
 });
