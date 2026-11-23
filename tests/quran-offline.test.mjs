@@ -179,3 +179,36 @@ test('service worker activation deletes old shells but retains saved Quran and u
  assert.deepEqual(removed,['deen-one-shell-v17']);
  assert.equal(claimed,true);
 });
+
+
+test('prayer push accepts only timely known prayers and suppresses duplicate alerts',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ const shown=[];
+ const now=Date.now();
+ const self={
+  registration:{scope:'https://example.org/Denn-one/',getNotifications:async()=>shown.map(n=>({tag:n.options.tag})).filter(n=>n.tag===currentTag),showNotification:async(title,options)=>shown.push({title,options})},
+  location:{origin:'https://example.org'},
+  clients:{claim:async()=>{}},
+  addEventListener:(name,handler)=>{handlers[name]=handler;}
+ };
+ const caches={keys:async()=>[],delete:async()=>true};
+ runInNewContext(worker,{self,caches,URL,Request,Response,console,Date,Set,Promise});
+ let currentTag='';
+ async function send(payload){
+  currentTag='deen-one-prayer-'+payload.prayer+'-'+payload.scheduledAt;
+  let done;
+  handlers.push({data:{json:()=>payload},waitUntil:p=>{done=p;}});
+  await done;
+ }
+ await send({type:'prayer',prayer:'Fajr',lang:'fr',scheduledAt:now-1000});
+ assert.equal(shown.length,1);
+ assert.match(shown[0].title,/Fajr/);
+ await send({type:'prayer',prayer:'Fajr',lang:'fr',scheduledAt:now-1000});
+ assert.equal(shown.length,1);
+ await send({type:'prayer',prayer:'Fajr',scheduledAt:now-11*60*1000});
+ await send({type:'prayer',prayer:'Fajr',scheduledAt:now+60*1000});
+ await send({type:'prayer',prayer:'Unknown',scheduledAt:now});
+ await send({type:'other',prayer:'Isha',scheduledAt:now});
+ assert.equal(shown.length,1);
+});
