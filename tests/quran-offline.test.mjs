@@ -212,3 +212,27 @@ test('prayer push accepts only timely known prayers and suppresses duplicate ale
  await send({type:'other',prayer:'Isha',scheduledAt:now});
  assert.equal(shown.length,1);
 });
+
+
+test('notification tap opens prayer screen, never an untrusted payload URL',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ const opened=[];
+ const self={
+  registration:{scope:'https://example.org/Denn-one/'},
+  location:{origin:'https://example.org'},
+  clients:{claim:async()=>{},matchAll:async()=>[],openWindow:async url=>{opened.push(url);}},
+  addEventListener:(name,handler)=>{handlers[name]=handler;}
+ };
+ runInNewContext(worker,{self,caches:{keys:async()=>[]},URL,Request,Response,console,Date,Set,Promise});
+ async function click(notification){
+  let closed=false,done;
+  handlers.notificationclick({notification:{...notification,close:()=>{closed=true;}},waitUntil:p=>{done=p;}});
+  await done;
+  assert.equal(closed,true);
+ }
+ await click({tag:'deen-one-prayer-Isha-123',data:{kind:'prayer',url:'https://attacker.example/'}});
+ assert.equal(opened[0],'https://example.org/Denn-one/vision.html#prayer');
+ await click({tag:'unrelated-alert',data:{url:'https://attacker.example/'}});
+ assert.equal(opened[1],'https://example.org/Denn-one/vision.html#home');
+});
