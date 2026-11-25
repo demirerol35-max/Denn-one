@@ -236,3 +236,19 @@ test('notification tap opens prayer screen, never an untrusted payload URL',asyn
  await click({tag:'unrelated-alert',data:{url:'https://attacker.example/'}});
  assert.equal(opened[1],'https://example.org/Denn-one/vision.html#home');
 });
+
+
+test('notification tap reuses an open Deen One window and navigates to prayer',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ let navigated='',focused=0,opened=0;
+ const existing={url:'https://example.org/Denn-one/vision.html#home',navigate:async url=>{navigated=url;return {focus:async()=>{focused++;}};},focus:async()=>{focused++;}};
+ const self={registration:{scope:'https://example.org/Denn-one/'},location:{origin:'https://example.org'},clients:{claim:async()=>{},matchAll:async()=>[existing],openWindow:async()=>{opened++;}},addEventListener:(name,handler)=>{handlers[name]=handler;}};
+ runInNewContext(worker,{self,caches:{keys:async()=>[]},URL,Request,Response,console,Date,Set,Promise});
+ let done;
+ handlers.notificationclick({notification:{tag:'deen-one-prayer-Fajr-123',data:{kind:'prayer'},close:()=>{}},waitUntil:p=>{done=p;}});
+ await done;
+ assert.equal(navigated,'https://example.org/Denn-one/vision.html#prayer');
+ assert.equal(focused,1);
+ assert.equal(opened,0);
+});
