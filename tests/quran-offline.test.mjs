@@ -269,3 +269,17 @@ test('simultaneous duplicate prayer pushes display only one alert',async()=>{
  await Promise.all([first,second]);
  assert.equal(displays,1);
 });
+
+
+test('failed notification display releases duplicate guard for retry',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ let attempts=0;
+ const self={registration:{scope:'https://example.org/Denn-one/',getNotifications:async()=>[],showNotification:async()=>{attempts++;if(attempts===1)throw Error('Temporary notification failure');}},location:{origin:'https://example.org'},clients:{claim:async()=>{}},addEventListener:(name,handler)=>{handlers[name]=handler;}};
+ runInNewContext(worker,{self,caches:{keys:async()=>[]},URL,Request,Response,console,Date,Set,Promise});
+ const payload={type:'prayer',prayer:'Asr',lang:'fr',scheduledAt:Date.now()-1000};
+ function send(){let pending;handlers.push({data:{json:()=>payload},waitUntil:p=>{pending=p;}});return pending;}
+ await assert.rejects(send(),/Temporary notification failure/);
+ await send();
+ assert.equal(attempts,2,'A failed display must not block a later delivery');
+});
