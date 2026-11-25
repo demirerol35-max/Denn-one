@@ -252,3 +252,20 @@ test('notification tap reuses an open Deen One window and navigates to prayer',a
  assert.equal(focused,1);
  assert.equal(opened,0);
 });
+
+
+test('simultaneous duplicate prayer pushes display only one alert',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ let displays=0;
+ let release;
+ const gate=new Promise(resolve=>{release=resolve;});
+ const self={registration:{scope:'https://example.org/Denn-one/',getNotifications:async()=>[],showNotification:async()=>{displays++;await gate;}},location:{origin:'https://example.org'},clients:{claim:async()=>{}},addEventListener:(name,handler)=>{handlers[name]=handler;}};
+ runInNewContext(worker,{self,caches:{keys:async()=>[]},URL,Request,Response,console,Date,Set,Promise});
+ const data={type:'prayer',prayer:'Isha',lang:'en',scheduledAt:Date.now()-1000};
+ function send(){let done;handlers.push({data:{json:()=>data},waitUntil:p=>{done=p;}});return done;}
+ const first=send(),second=send();
+ release();
+ await Promise.all([first,second]);
+ assert.equal(displays,1);
+});
