@@ -1,6 +1,6 @@
 # Deen One — Android release and prayer notification checklist
 
-Status: **not yet validated on a native Android build**. The repository currently documents a GitHub Pages/PWA deployment. Do not treat green browser tests as proof that an APK can be built or that prayer alarms work after the app is closed.
+Status: **Android native source and a user-supplied debug APK identified; on-device alarm behavior not yet validated**. The repository includes an `android/` Kotlin/Gradle application targeting SDK 35 (`0.1.2-dev`). The uploaded `app-debug.apk` contains `PrayerScheduleCoordinator`, `PrayerRescheduleReceiver`, and `DeenOneAndroid` classes. Do not treat green browser tests as proof that prayer alarms work after the app is closed.
 
 ## Current web implementation
 - `service-worker.js` receives **push events**, validates prayer names and a limited delivery window, suppresses duplicate notifications, and routes notification clicks to `vision.html#prayer`.
@@ -12,7 +12,8 @@ Status: **not yet validated on a native Android build**. The repository currentl
 2. **Web Push:** implement an authenticated subscription flow, secure server-side scheduling and VAPID delivery. This requires a network connection and delivery timing may vary. Do not put VAPID private keys or push credentials in the public repository.
 
 ## Device acceptance checklist
-- [ ] Locate the actual APK build source and CI workflow, and record the build artifact/version.
+- [x] Locate Android source: `android/app/build.gradle.kts` and `android/app/src/main/java/com/deenone/prayers/` (version `0.1.2-dev`). Uploaded debug APK inspected; Gradle plugin metadata reports 8.7.3.
+- [ ] Identify the exact GitHub Actions APK workflow and verify its current build output.
 - [ ] Install a fresh APK and upgrade an existing APK without losing settings.
 - [ ] Confirm notification permission prompt and settings on Android 13+.
 - [ ] Verify all five prayers, local time zone, daylight-saving changes and manual/GPS location.
