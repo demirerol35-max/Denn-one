@@ -17,7 +17,7 @@ self.addEventListener('install', event => {
 });
 self.addEventListener('activate', event => {
   event.waitUntil(Promise.all([
-    caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('deen-one-') && key !== CACHE).map(key => caches.delete(key)))),
+    caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('deen-one-shell-') && key !== CACHE).map(key => caches.delete(key)))),
     self.clients.claim()
   ]));
 });
@@ -41,6 +41,8 @@ self.addEventListener('fetch', event => {
 
 // Receive server-sent Web Push messages while the app is closed.
 // A push subscription and a trusted scheduling server are still required.
+// Prevent concurrent deliveries of the same push from racing past getNotifications().
+const pendingPrayerNotifications = new Set();
 self.addEventListener('push', event => {
   event.waitUntil((async () => {
     let data = {};
@@ -80,16 +82,22 @@ self.addEventListener('push', event => {
       timestamp: data.scheduledAt,
       data: { kind: 'prayer' }
     };
-    // Duplicate push deliveries should not vibrate or alert twice.
-    // A transient failure while checking existing notifications must not
-    // silently prevent a time-sensitive prayer reminder from appearing.
+    // Avoid a race if the push service delivers the same prayer twice at once.
+    if (pendingPrayerNotifications.has(options.tag)) return;
+    pendingPrayerNotifications.add(options.tag);
     try {
-      const existing = await self.registration.getNotifications({ tag: options.tag });
-      if (existing.length) return;
-    } catch (error) {
-      console.warn('Deen One: notification deduplication unavailable', error);
+      // A transient failure while checking existing notifications must not
+      // silently prevent a time-sensitive prayer reminder from appearing.
+      try {
+        const existing = await self.registration.getNotifications({ tag: options.tag });
+        if (existing.length) return;
+      } catch (error) {
+        console.warn('Deen One: notification deduplication unavailable', error);
+      }
+      await self.registration.showNotification(title, options);
+    } finally {
+      pendingPrayerNotifications.delete(options.tag);
     }
-    await self.registration.showNotification(title, options);
   })());
 });
 

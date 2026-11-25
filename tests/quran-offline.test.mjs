@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {runInNewContext} from 'node:vm';
 import {QURAN_API,QURAN_TEXT_CACHE,MAX_SAVED_SURAHS,TRANSLATIONS,validateQuranEdition,validateQuranCatalogue,fetchQuranJSON,createSavedSurah,saveSurahOffline,readSurahOffline,listSavedSurahs,deleteSurahOffline} from '../quran-offline.mjs';
 
 function storage() {
@@ -108,4 +110,176 @@ test('catalogue accepts only the complete sequential list and ignores extra fiel
  assert.equal(validateQuranCatalogue(list)[0].secret,undefined);
  assert.throws(()=>validateQuranCatalogue(list.slice(1)));
  list[1].number=1;assert.throws(()=>validateQuranCatalogue(list));
+});
+
+
+test('API path guard permits only supported surahs and text editions',async()=>{
+ const calls=[];
+ const fetcher=async url=>{calls.push(url);return Response.json({code:200,data:{ok:true}})};
+ for(const path of ['/surah/1/ar.alafasy','/surah/114/en.transliteration','/surah/112/fr.hamidullah','/surah/2/tr.diyanet']){
+  assert.deepEqual(await fetchQuranJSON(path,{fetcher}),{ok:true});
+ }
+ assert.equal(calls.length,4);
+ for(const path of ['/surah/0/ar.alafasy','/surah/115/ar.alafasy','/surah/1/evil.edition','/surah/1/ar.warsh','/surah/1/fr.hamidullah?extra=1','/surah/001/fr.hamidullah']){
+  await assert.rejects(fetchQuranJSON(path,{fetcher}),/Invalid API path/);
+ }
+ assert.equal(calls.length,4,'Rejected paths must never reach the network');
+});
+
+
+test('deadline rejects stalled fetch adapters and JSON parsers that ignore abort',async()=>{
+ const never=()=>new Promise(()=>{});
+ await assert.rejects(fetchQuranJSON('/meta',{fetcher:never,timeoutMs:15}),{name:'TimeoutError'});
+ await assert.rejects(fetchQuranJSON('/meta',{fetcher:async()=>({ok:true,json:never}),timeoutMs:15}),{name:'TimeoutError'});
+});
+
+
+test('manual cancellation settles even when the fetch adapter ignores AbortSignal',async()=>{
+ const controller=new AbortController();
+ const pending=fetchQuranJSON('/meta',{fetcher:()=>new Promise(()=>{}),signal:controller.signal,timeoutMs:1000});
+ controller.abort();
+ await assert.rejects(pending,{name:'AbortError'});
+});
+
+test('invalid request timeouts are rejected before any network activity',async()=>{
+ let calls=0;
+ for(const timeoutMs of [0,-1,NaN,Infinity,1.5,60001]){
+  await assert.rejects(fetchQuranJSON('/meta',{timeoutMs,fetcher:()=>{calls++;throw Error('Unexpected network call')}}),/Invalid timeout/);
+ }
+ assert.equal(calls,0);
+});
+
+
+test('service worker activation preserves offline Quran text caches',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ assert.match(worker,/key\.startsWith\('deen-one-shell-'\)/);
+ assert.doesNotMatch(worker,/key\.startsWith\('deen-one-'\)/);
+ assert.equal(QURAN_TEXT_CACHE,'deen-quran-text-v1');
+ assert.equal(QURAN_TEXT_CACHE.startsWith('deen-one-shell-'),false);
+});
+
+
+test('service worker activation deletes old shells but retains saved Quran and unrelated caches',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const names=['deen-one-shell-v17','deen-one-shell-v18',QURAN_TEXT_CACHE,'other-app-cache'];
+ const removed=[];
+ const handlers={};
+ let claimed=false;
+ const self={
+  registration:{scope:'https://example.org/Denn-one/'},
+  location:{origin:'https://example.org'},
+  clients:{claim:async()=>{claimed=true;}},
+  addEventListener:(name,handler)=>{handlers[name]=handler;}
+ };
+ const caches={keys:async()=>names,delete:async(name)=>{removed.push(name);return true;}};
+ runInNewContext(worker,{self,caches,URL,Request,Response,console,Date,Set,Promise});
+ let completion;
+ handlers.activate({waitUntil:(promise)=>{completion=promise;}});
+ await completion;
+ assert.deepEqual(removed,['deen-one-shell-v17']);
+ assert.equal(claimed,true);
+});
+
+
+test('prayer push accepts only timely known prayers and suppresses duplicate alerts',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ const shown=[];
+ const now=Date.now();
+ const self={
+  registration:{scope:'https://example.org/Denn-one/',getNotifications:async()=>shown.map(n=>({tag:n.options.tag})).filter(n=>n.tag===currentTag),showNotification:async(title,options)=>shown.push({title,options})},
+  location:{origin:'https://example.org'},
+  clients:{claim:async()=>{}},
+  addEventListener:(name,handler)=>{handlers[name]=handler;}
+ };
+ const caches={keys:async()=>[],delete:async()=>true};
+ runInNewContext(worker,{self,caches,URL,Request,Response,console,Date,Set,Promise});
+ let currentTag='';
+ async function send(payload){
+  currentTag='deen-one-prayer-'+payload.prayer+'-'+payload.scheduledAt;
+  let done;
+  handlers.push({data:{json:()=>payload},waitUntil:p=>{done=p;}});
+  await done;
+ }
+ await send({type:'prayer',prayer:'Fajr',lang:'fr',scheduledAt:now-1000});
+ assert.equal(shown.length,1);
+ assert.match(shown[0].title,/Fajr/);
+ await send({type:'prayer',prayer:'Fajr',lang:'fr',scheduledAt:now-1000});
+ assert.equal(shown.length,1);
+ await send({type:'prayer',prayer:'Fajr',scheduledAt:now-11*60*1000});
+ await send({type:'prayer',prayer:'Fajr',scheduledAt:now+60*1000});
+ await send({type:'prayer',prayer:'Unknown',scheduledAt:now});
+ await send({type:'other',prayer:'Isha',scheduledAt:now});
+ assert.equal(shown.length,1);
+});
+
+
+test('notification tap opens prayer screen, never an untrusted payload URL',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ const opened=[];
+ const self={
+  registration:{scope:'https://example.org/Denn-one/'},
+  location:{origin:'https://example.org'},
+  clients:{claim:async()=>{},matchAll:async()=>[],openWindow:async url=>{opened.push(url);}},
+  addEventListener:(name,handler)=>{handlers[name]=handler;}
+ };
+ runInNewContext(worker,{self,caches:{keys:async()=>[]},URL,Request,Response,console,Date,Set,Promise});
+ async function click(notification){
+  let closed=false,done;
+  handlers.notificationclick({notification:{...notification,close:()=>{closed=true;}},waitUntil:p=>{done=p;}});
+  await done;
+  assert.equal(closed,true);
+ }
+ await click({tag:'deen-one-prayer-Isha-123',data:{kind:'prayer',url:'https://attacker.example/'}});
+ assert.equal(opened[0],'https://example.org/Denn-one/vision.html#prayer');
+ await click({tag:'unrelated-alert',data:{url:'https://attacker.example/'}});
+ assert.equal(opened[1],'https://example.org/Denn-one/vision.html#home');
+});
+
+
+test('notification tap reuses an open Deen One window and navigates to prayer',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ let navigated='',focused=0,opened=0;
+ const existing={url:'https://example.org/Denn-one/vision.html#home',navigate:async url=>{navigated=url;return {focus:async()=>{focused++;}};},focus:async()=>{focused++;}};
+ const self={registration:{scope:'https://example.org/Denn-one/'},location:{origin:'https://example.org'},clients:{claim:async()=>{},matchAll:async()=>[existing],openWindow:async()=>{opened++;}},addEventListener:(name,handler)=>{handlers[name]=handler;}};
+ runInNewContext(worker,{self,caches:{keys:async()=>[]},URL,Request,Response,console,Date,Set,Promise});
+ let done;
+ handlers.notificationclick({notification:{tag:'deen-one-prayer-Fajr-123',data:{kind:'prayer'},close:()=>{}},waitUntil:p=>{done=p;}});
+ await done;
+ assert.equal(navigated,'https://example.org/Denn-one/vision.html#prayer');
+ assert.equal(focused,1);
+ assert.equal(opened,0);
+});
+
+
+test('simultaneous duplicate prayer pushes display only one alert',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ let displays=0;
+ let release;
+ const gate=new Promise(resolve=>{release=resolve;});
+ const self={registration:{scope:'https://example.org/Denn-one/',getNotifications:async()=>[],showNotification:async()=>{displays++;await gate;}},location:{origin:'https://example.org'},clients:{claim:async()=>{}},addEventListener:(name,handler)=>{handlers[name]=handler;}};
+ runInNewContext(worker,{self,caches:{keys:async()=>[]},URL,Request,Response,console,Date,Set,Promise});
+ const data={type:'prayer',prayer:'Isha',lang:'en',scheduledAt:Date.now()-1000};
+ function send(){let done;handlers.push({data:{json:()=>data},waitUntil:p=>{done=p;}});return done;}
+ const first=send(),second=send();
+ release();
+ await Promise.all([first,second]);
+ assert.equal(displays,1);
+});
+
+
+test('failed notification display releases duplicate guard for retry',async()=>{
+ const worker=await readFile(new URL('../service-worker.js',import.meta.url),'utf8');
+ const handlers={};
+ let attempts=0;
+ const self={registration:{scope:'https://example.org/Denn-one/',getNotifications:async()=>[],showNotification:async()=>{attempts++;if(attempts===1)throw Error('Temporary notification failure');}},location:{origin:'https://example.org'},clients:{claim:async()=>{}},addEventListener:(name,handler)=>{handlers[name]=handler;}};
+ runInNewContext(worker,{self,caches:{keys:async()=>[]},URL,Request,Response,console,Date,Set,Promise});
+ const payload={type:'prayer',prayer:'Asr',lang:'fr',scheduledAt:Date.now()-1000};
+ function send(){let pending;handlers.push({data:{json:()=>payload},waitUntil:p=>{pending=p;}});return pending;}
+ await assert.rejects(send(),/Temporary notification failure/);
+ await send();
+ assert.equal(attempts,2,'A failed display must not block a later delivery');
 });

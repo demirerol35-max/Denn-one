@@ -227,7 +227,7 @@ class MainActivity : Activity() {
         }
 
         if (savedInstanceState == null) {
-            webView.loadUrl(oauthCallbackUrl(intent?.data) ?: "https://demirerol35-max.github.io/Denn-one/vision.html")
+            webView.loadUrl(oauthCallbackUrl(intent?.data) ?: prayerNotificationUrl(intent) ?: "https://demirerol35-max.github.io/Denn-one/vision.html")
             // The native permission must not depend on browser Notification API
             // support or on the user discovering the reminders panel.
             webView.post { offerFirstRunNotificationConsent() }
@@ -248,11 +248,16 @@ class MainActivity : Activity() {
         return builder.build().toString()
     }
 
+    private fun prayerNotificationUrl(intent: Intent?): String? =
+        if (intent?.getBooleanExtra("openPrayer", false) == true)
+            "https://demirerol35-max.github.io/Denn-one/vision.html#prayer"
+        else null
+
     override fun onNewIntent(newIntent: Intent) {
         super.onNewIntent(newIntent)
         setIntent(newIntent)
-        oauthCallbackUrl(newIntent.data)?.let { callback ->
-            if (::webView.isInitialized) webView.loadUrl(callback)
+        (oauthCallbackUrl(newIntent.data) ?: prayerNotificationUrl(newIntent))?.let { destination ->
+            if (::webView.isInitialized) webView.loadUrl(destination)
         }
     }
 
